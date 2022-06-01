@@ -68,8 +68,11 @@ class MyTestCase(unittest.TestCase):
         g1.add_nodes_from(range(1, 3))
         g1.add_edge(1, 2, label='a')
         g1.nodes[1]['label'] = 'x'
-        self.assertEqual(21.44, utils.get_description_length(g1, self.standard_table))
-        self.assertEqual(111.76, utils.get_description_length(self.graph, self.standard_table))
+        # print(utils.binomial(5.0, 2))
+        print(utils.get_description_length(g1, self.standard_table))
+        print(utils.get_description_length(self.graph, self.standard_table))
+        self.assertAlmostEqual(21.44, utils.get_description_length(g1, self.standard_table), 2)
+        self.assertAlmostEqual(111.76, utils.get_description_length(self.graph, self.standard_table), 2)
 
 
 if __name__ == '__main__':

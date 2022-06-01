@@ -14,12 +14,12 @@ from networkx import Graph
       
   Returns
   -------
-    double   .
+    float   .
 """
 
 
 def log2(value, total):
-    return round(-math.log2(value/total), 2)
+    return -math.log2(value / total)
 
 
 def count_edge_label(graph: Graph):
@@ -78,7 +78,7 @@ def get_total_label(graph: Graph):
 
        Returns
        -------
-         double
+         float
     """
 
     labels = count_edge_label(graph)
@@ -100,7 +100,7 @@ def binomial(n, k):
 
     Returns
     -------
-      double
+      float
     """
     if k > n:
         raise ValueError("k should be lower than n in binomial coefficient")
@@ -121,7 +121,7 @@ def universal_integer_encoding(x):
 
     Returns
     -------
-      double
+      int
     """
     if x < 1:
         raise ValueError()
@@ -138,18 +138,15 @@ def universal_integer_encoding_with0(x):
 
     Returns
     -------
-    double
+    int
     """
     if x < 0:
         raise ValueError()
-    elif x == 0:
-        return universal_integer_encoding(x + 1)
     else:
-        return universal_integer_encoding(x)
+        return universal_integer_encoding(x+1)
 
 
 def get_description_length(pattern: Graph, standard_table):
-
     """ Compute a graph description length
 
     Parameters
@@ -159,28 +156,33 @@ def get_description_length(pattern: Graph, standard_table):
 
     Returns
     -------
-    double
+    float
     """
-    edges = count_edge_label(pattern)
-    vertex = count_vertex_label(pattern)
-    total_label = standard_table.total_label()
+    edges = count_edge_label(pattern)  # count each pattern edge label occurrences
+    vertex = count_vertex_label(pattern)  # count each pattern vertex label occurrences
+
+    # Get total number of label in the standard table
+    total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+
     vertex_number = len(pattern.nodes())
 
-    total_label_description = round(math.log2(total_label), 2)  # description length for all labels
-    vertex_number_description = round(universal_integer_encoding_with0(vertex_number), 2)  # description length for all vertex
+    total_label_description = math.log2(total_label) # description length for all labels
+    vertex_number_description = universal_integer_encoding_with0(vertex_number)  # description length for all vertex
 
     # Compute description length for vertex
     vertex_description = dict()
     for u, v in vertex.items():
-        desc = standard_table.vertex_st()[u] + universal_integer_encoding_with0(v) + math.log2(binomial(vertex_number, v))
-        vertex_description[u] = round(desc, 2)
+        desc = standard_table.vertex_st()[u] + universal_integer_encoding_with0(v) + math.log2(
+                binomial(vertex_number, v))
+        vertex_description[u] = desc
 
     # Compute description length for edges
 
     edges_description = dict()
     for a, b in edges.items():
-        desc = standard_table.edges_st()[a] + universal_integer_encoding_with0(b) + math.log2(binomial(math.pow(vertex_number, 2), b))
-        edges_description[a] = round(desc, 2)
+        desc = standard_table.edges_st()[a] + universal_integer_encoding_with0(b) + math.log2(
+               binomial(int(math.pow(vertex_number, 2)), b))
+        edges_description[a] = desc
 
     # Compute description length through description length of edges and vertex
     description_length = 0.0
@@ -189,4 +191,4 @@ def get_description_length(pattern: Graph, standard_table):
     for j in edges_description.values():
         description_length = description_length + j
 
-    return round(description_length + total_label_description + vertex_number_description, 2)
+    return description_length + total_label_description + vertex_number_description
