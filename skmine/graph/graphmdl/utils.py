@@ -143,10 +143,10 @@ def universal_integer_encoding_with0(x):
     if x < 0:
         raise ValueError()
     else:
-        return universal_integer_encoding(x+1)
+        return universal_integer_encoding(x + 1)
 
 
-def get_description_length(pattern: Graph, standard_table):
+def encode(pattern: Graph, standard_table):
     """ Compute a graph description length
 
     Parameters
@@ -166,14 +166,14 @@ def get_description_length(pattern: Graph, standard_table):
 
     vertex_number = len(pattern.nodes())
 
-    total_label_description = math.log2(total_label) # description length for all labels
+    total_label_description = math.log2(total_label)  # description length for all labels
     vertex_number_description = universal_integer_encoding_with0(vertex_number)  # description length for all vertex
 
     # Compute description length for vertex
     vertex_description = dict()
     for u, v in vertex.items():
         desc = standard_table.vertex_st()[u] + universal_integer_encoding_with0(v) + math.log2(
-                binomial(vertex_number, v))
+            binomial(vertex_number, v))
         vertex_description[u] = desc
 
     # Compute description length for edges
@@ -181,7 +181,7 @@ def get_description_length(pattern: Graph, standard_table):
     edges_description = dict()
     for a, b in edges.items():
         desc = standard_table.edges_st()[a] + universal_integer_encoding_with0(b) + math.log2(
-               binomial(int(math.pow(vertex_number, 2)), b))
+            binomial(int(math.pow(vertex_number, 2)), b))
         edges_description[a] = desc
 
     # Compute description length through description length of edges and vertex
@@ -192,3 +192,75 @@ def get_description_length(pattern: Graph, standard_table):
         description_length = description_length + j
 
     return description_length + total_label_description + vertex_number_description
+
+
+def encode_vertex_singleton(standard_table, vertex_label):
+    """ Compute a vertex singleton description length
+
+        Parameters
+        ----------
+        standard_table
+        vertex_label
+        Returns
+        -------
+        float
+    """
+    if vertex_label == "":
+        raise ValueError()
+    else:
+        # Get total number of label in the standard table
+        total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+        total_label_description = math.log2(total_label)  # description length for all labels
+        vertex_number_description = universal_integer_encoding_with0(1)  # description length for all vertex
+
+        # Compute description length for vertex
+        desc = standard_table.vertex_st()[vertex_label] + universal_integer_encoding_with0(1) + math.log2(binomial(1, 1))
+
+        return desc + total_label_description + vertex_number_description
+
+
+def encode_edge_singleton(standard_table, edge_label):
+    """ Compute an edge singleton description length
+
+            Parameters
+            ----------
+            standard_table
+            edge_label
+
+            Returns
+            -------
+            float
+    """
+    if edge_label == "":
+        raise ValueError()
+    else:
+        # Get total number of label in the standard table
+        total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+        total_label_description = math.log2(total_label)  # description length for all labels
+        vertex_number_description = universal_integer_encoding_with0(2)  # description length for all vertex
+
+        # Compute description length for vertex
+        desc = standard_table.edges_st()[edge_label] + universal_integer_encoding_with0(1) + math.log2(binomial(4, 1))
+
+        return desc + total_label_description + vertex_number_description
+
+
+def encode_singleton(standard_table, arity, label):
+    """ Compute a singleton description length by her arity
+
+        Parameters
+        ----------
+        standard_table
+        label
+        arity
+        Returns
+        -------
+        float
+    """
+
+    if arity == 1:
+        return encode_vertex_singleton(standard_table, label)
+    elif arity == 2:
+        return encode_edge_singleton(standard_table, label)
+    else:
+        raise ValueError("arity should must be 1 or 2")

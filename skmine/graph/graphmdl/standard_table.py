@@ -19,7 +19,7 @@ class StandardTable:
             """
         self._total_label = utils.get_total_label(graph)
         self._vertexST = dict([(u, utils.log2(v, self._total_label))
-                               for u, v in utils.count_vertex_label(graph).items()] )
+                               for u, v in utils.count_vertex_label(graph).items()])
         self._edgeST = dict([(u, utils.log2(v, self._total_label))
                              for u, v in utils.count_edge_label(graph).items()])
 
@@ -74,6 +74,39 @@ class StandardTable:
 
         """
         return self._edgeST
+
+    def encode(self, pattern: Graph):
+        """ Compute description length of a pattern with this standard table
+        Parameters
+        ----------
+        pattern
+        Returns
+        ---------
+        float
+        """
+        return utils.encode(pattern, self)
+
+    def encode_singleton_vertex(self, vertex_singleton_label):
+        """ Compute description length of a vertex singleton pattern with this standard table
+        Parameters
+        ----------
+        vertex_singleton_label
+        Returns
+        ---------
+        float
+        """
+        return utils.encode_singleton(self, 1, vertex_singleton_label)
+
+    def encode_singleton_edge(self, edge_singleton_label):
+        """ Compute description length of an edge singleton pattern with this standard table
+        Parameters
+        ----------
+        edge_singleton_label
+        Returns
+        ---------
+        float
+        """
+        return utils.encode_singleton(self, 2, edge_singleton_label)
 
     def __str__(self) -> str:
         return "Edge label\n-----------------\n" + self.display_edge_st() + "\nVertex label\n----------------------\n" + self.display_vertex_st()
