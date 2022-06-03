@@ -1,8 +1,9 @@
 """ Utils function"""
 import math
 from collections import Counter
+import networkx as nx
 from networkx import Graph
-
+from networkx.algorithms import isomorphism as iso
 """ Compute description length
   
   Parameters
@@ -214,7 +215,8 @@ def encode_vertex_singleton(standard_table, vertex_label):
         vertex_number_description = universal_integer_encoding_with0(1)  # description length for all vertex
 
         # Compute description length for vertex
-        desc = standard_table.vertex_st()[vertex_label] + universal_integer_encoding_with0(1) + math.log2(binomial(1, 1))
+        desc = standard_table.vertex_st()[vertex_label] + universal_integer_encoding_with0(1) + math.log2(
+            binomial(1, 1))
 
         return desc + total_label_description + vertex_number_description
 
@@ -264,3 +266,22 @@ def encode_singleton(standard_table, arity, label):
         return encode_edge_singleton(standard_table, label)
     else:
         raise ValueError("arity should must be 1 or 2")
+
+
+def get_embeddings(pattern, graph):
+    # Create functions to compare node and edge label
+    node_match = iso.categorical_node_match('label', '')
+    edge_match = iso.categorical_edge_match('label', '')
+    comp = {
+        'node_match': node_match,
+        'edge_match': edge_match
+    }
+    graph_matcher = None
+    # Create matcher according the graph type (directed or no)
+
+    if nx.is_directed(graph):
+        graph_matcher = iso.DiGraphMatcher(graph, pattern, **comp)
+    else:
+        graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
+
+    return list(graph_matcher.subgraph_isomorphisms_iter())
