@@ -4,6 +4,7 @@ from collections import Counter
 import networkx as nx
 from networkx import Graph
 from networkx.algorithms import isomorphism as iso
+
 """ Compute description length
   
   Parameters
@@ -269,6 +270,15 @@ def encode_singleton(standard_table, arity, label):
 
 
 def get_embeddings(pattern, graph):
+    """ Provide the embeddings of a pattern in a given graph
+    Parameters
+    ----------
+    pattern
+    graph
+    Returns
+    -------
+    list
+    """
     # Create functions to compare node and edge label
     node_match = iso.categorical_node_match('label', '')
     edge_match = iso.categorical_edge_match('label', '')
@@ -285,3 +295,131 @@ def get_embeddings(pattern, graph):
         graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
 
     return list(graph_matcher.subgraph_isomorphisms_iter())
+
+
+def is_vertex_singleton(pattern):
+    """ Check if a given pattern is a vertex singleton pattern
+    Parameters
+    ---------
+    pattern
+    Returns
+    ---------
+    bool
+    """
+    if len(pattern.nodes()) == 1:
+        if bool(count_vertex_label(pattern)) and \
+                list(count_vertex_label(pattern).values())[0] == 1:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+def is_edge_singleton(pattern):
+    """ Check if a given pattern is a edge singleton pattern
+    Parameters
+    ---------
+    pattern
+    Returns
+    ---------
+    bool
+    """
+    if len(pattern.nodes()) == 2:
+        # Check first if the nodes haven't labels
+        if "label" not in pattern.nodes(data=True)[1] \
+                and "label" not in pattern.nodes(data=True)[2]:
+            # Check if the edge have exactly one label
+            if bool(count_edge_label(pattern)) \
+                    and list(count_edge_label(pattern).values())[0] == 1:
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+
+def get_support(embeddings):
+    """ Compute the pattern support in the graph according a minimum image based support
+    Parameters
+    ---------
+    embeddings
+
+    Returns
+    -------
+    int
+
+    """
+    node_embeddings = dict()
+    for e in embeddings:
+        for i in e.items():
+            if i[1] in node_embeddings:
+                node_embeddings[i[1]].add(i[0])
+            else:
+                node_embeddings[i[1]] = set()
+    embed = dict()
+    for key, value in node_embeddings.items():
+        embed[key] = len(value)
+
+    return min(embed.values())
+
+
+def get_label_index(label, values):
+    """ Provide a label index in the values
+    Parameters
+    ----------
+    label
+    values
+    Returns
+    ----------
+    int
+    """
+    return values.index(label)
+
+
+def get_node_label(key, index, graph):
+    """ Provide a particular node label in a given graph by the index and the node key
+    Parameters
+    ----------
+    key
+    index
+    graph
+    Returns
+    ---------
+    str
+    """
+    return graph.nodes(data=True)[key]['label'][index]
+
+
+def get_edge_label(start, end, index, graph):
+    """ Provide a particular edge label in a given graph by the edge start, edge end and the label index
+
+    Parameters
+    ---------
+    start
+    end
+    index
+    graph
+
+    Returns
+    ---------
+    str"""
+    return graph[start][end]['label'][index]
+
+
+def is_without_edge(pattern):
+    """ Check if the pattern is without edge
+    Parameters
+    ----------
+    pattern
+
+    Returns
+    ---------
+    bool
+    """
+    if len(pattern.edges()) == 0:
+        return True
+    else:
+        return False
