@@ -280,8 +280,21 @@ def get_embeddings(pattern, graph):
     list
     """
     # Create functions to compare node and edge label
-    node_match = iso.categorical_node_match('label', '')
-    edge_match = iso.categorical_edge_match('label', '')
+    def node_match(n1, n2):
+        if 'label' in n1 and 'label' in n2:
+            res = list()
+            for i in n1['label']:
+                res.append(i in n2['label'])
+            return True in res
+        else:
+            return True
+
+    def edge_match(e1, e2):
+        if 'label' in e1 and 'label' in e2:
+            return e1['label'] == e2['label']
+        else:
+            return True
+
     comp = {
         'node_match': node_match,
         'edge_match': edge_match
@@ -307,8 +320,7 @@ def is_vertex_singleton(pattern):
     bool
     """
     if len(pattern.nodes()) == 1:
-        if bool(count_vertex_label(pattern)) and \
-                list(count_vertex_label(pattern).values())[0] == 1:
+        if get_total_label(pattern) == 1:
             return True
         else:
             return False
@@ -330,7 +342,8 @@ def is_edge_singleton(pattern):
         if "label" not in pattern.nodes(data=True)[1] \
                 and "label" not in pattern.nodes(data=True)[2]:
             # Check if the edge have exactly one label
-            if bool(count_edge_label(pattern)) \
+            if count_edge_label(pattern) is not None \
+                    and len(count_edge_label(pattern).values()) == 1\
                     and list(count_edge_label(pattern).values())[0] == 1:
                 return True
             else:
@@ -376,7 +389,10 @@ def get_label_index(label, values):
     ----------
     int
     """
-    return values.index(label)
+    if label in values:
+        return values.index(label)
+    else:
+        raise ValueError()
 
 
 def get_node_label(key, index, graph):
@@ -390,23 +406,29 @@ def get_node_label(key, index, graph):
     ---------
     str
     """
-    return graph.nodes(data=True)[key]['label'][index]
+    if len(graph.nodes(data=True)[key]['label']) > index and key in graph.nodes():
+        return graph.nodes(data=True)[key]['label'][index]
+    else:
+        raise ValueError()
 
 
-def get_edge_label(start, end, index, graph):
-    """ Provide a particular edge label in a given graph by the edge start, edge end and the label index
+def get_edge_label(start, end, graph):
+    """ Provide a particular edge label in a given graph by the edge start, edge end
 
     Parameters
     ---------
     start
     end
-    index
     graph
 
     Returns
     ---------
-    str"""
-    return graph[start][end]['label'][index]
+    str
+    """
+    if graph[start][end] is not None and 'label' in graph[start][end]:
+        return graph[start][end]['label']
+    else:
+        raise ValueError()
 
 
 def is_without_edge(pattern):

@@ -100,3 +100,156 @@ def test_encode_singleton():
 
     assert pytest.approx(utils.encode_singleton(standard_table, 2, 'a'), rel=1e-01) == 14.35
     assert pytest.approx(utils.encode_singleton(standard_table, 1, 'x'), rel=1e-01) == 12.67
+
+    # Test for graph
+
+
+ng = nx.Graph()
+ng.add_nodes_from(range(1, 6))
+ng.add_edge(1, 2, label='e')
+ng.add_edge(2, 3, label='e')
+ng.add_edge(2, 4, label='e')
+ng.add_edge(5, 2, label='e')
+ng.nodes[1]['label'] = 'A'
+ng.nodes[2]['label'] = 'A'
+ng.nodes[3]['label'] = 'B'
+ng.nodes[4]['label'] = 'B'
+ng.nodes[5]['label'] = 'A'
+
+pattern = nx.Graph()
+pattern.add_nodes_from(range(1, 3))
+pattern.add_edge(1, 2, label='e')
+pattern.nodes[1]['label'] = 'A'
+
+
+def test_get_embeddings():
+    ng2 = nx.DiGraph()
+    ng2.add_nodes_from(range(1, 6))
+    ng2.add_edge(1, 2, label='e')
+    ng2.add_edge(2, 3, label='e')
+    ng2.add_edge(2, 4, label='e')
+    ng2.add_edge(5, 2, label='e')
+    ng2.nodes[1]['label'] = 'A'
+    ng2.nodes[2]['label'] = 'A'
+    ng2.nodes[3]['label'] = 'B'
+    ng2.nodes[4]['label'] = 'B'
+    ng2.nodes[5]['label'] = 'A'
+
+    ngp = nx.DiGraph()
+    ngp.add_nodes_from(range(1, 3))
+    ngp.add_edge(1, 2, label='e')
+    ngp.nodes[1]['label'] = 'A'
+    # first test for digraph
+    assert len(utils.get_embeddings(ngp, ng2)) == 4
+    assert utils.get_embeddings(ngp, ng2)[0][1] == 1
+    assert utils.get_embeddings(ngp, ng2)[0][2] == 2
+
+    assert len(utils.get_embeddings(pattern, ng)) == 6
+    assert utils.get_embeddings(pattern, ng)[5][5] == 1
+    assert utils.get_embeddings(pattern, ng)[5][2] == 2
+
+
+def test_is_vertex_singleton():
+    g1 = nx.DiGraph()
+    g1.add_node(1, label='a')
+    assert utils.is_vertex_singleton(g1) is True
+
+    g2 = nx.Graph()
+    g2.add_node(1, label='a')
+    assert utils.is_vertex_singleton(g2) is True
+
+    g3 = nx.Graph()
+    g3.add_nodes_from(range(1, 3))
+    assert utils.is_vertex_singleton(g3) is False
+
+    g4 = nx.DiGraph()
+    g4.add_node(1)
+    g4.nodes[1]['label'] = 'a', 'b'
+    assert utils.is_vertex_singleton(g4) is False
+
+
+def test_is_edge_singleton():
+    g1 = nx.DiGraph()
+    g1.add_node(1, label='a')
+    assert utils.is_edge_singleton(g1) is False
+
+    g2 = nx.Graph()
+    g2.add_node(1)
+    g2.add_node(2, label='a')
+    assert utils.is_edge_singleton(g2) is False
+
+    g3 = nx.DiGraph()
+    g3.add_node(1)
+    g3.add_node(2)
+    g3.add_edge(1, 2)
+    assert utils.is_edge_singleton(g3) is False
+
+    g4 = nx.Graph()
+    g4.add_node(1)
+    g4.add_node(2)
+    g4.add_edge(1, 2)
+    g4[1][2]['label'] = 'a', 'b'
+    print(bool(utils.count_edge_label(g4)))
+    assert utils.is_edge_singleton(g4) is False
+
+    g5 = nx.DiGraph()
+    g5.add_node(1)
+    g5.add_node(2)
+    g5.add_edge(1, 2)
+    g5[1][2]['label'] = 'a'
+    assert utils.is_edge_singleton(g5) is True
+
+
+def test_get_support():
+    pattern1 = nx.DiGraph()
+    pattern1.add_nodes_from(range(1, 4))
+    pattern1.nodes[1]['label'] = 'x'
+    pattern1.nodes[2]['label'] = 'y'
+    pattern1.nodes[3]['label'] = 'z'
+    pattern1.add_edge(1, 2, label='a')
+    pattern1.add_edge(2, 3, label='b')
+
+    assert utils.get_support(utils.get_embeddings(pattern1, graph)) == 1
+    assert utils.get_support(utils.get_embeddings(pattern, ng)) == 2
+
+
+def test_get_label_index():
+    values = ('a', 'b')
+    assert utils.get_label_index('a', values) == 0
+
+    with pytest.raises(ValueError):
+        utils.get_label_index('c', values)
+
+
+def test_get_node_label():
+    test = nx.Graph()
+    test.add_node(1)
+    test.nodes[1]['label'] = 'a', 'b'
+
+    with pytest.raises(ValueError):
+        utils.get_node_label(1, 6, test)
+        utils.get_node_label(2, 0, test)
+
+    assert utils.get_node_label(1, 0, test) == 'a'
+
+
+def test_get_edge_label():
+    test = nx.Graph()
+    test.add_nodes_from(range(1, 3))
+    test.add_edge(1, 2, label='a')
+    assert utils.get_edge_label(1, 2, test) == 'a'
+
+    test.add_edge(2, 3)
+    with pytest.raises(ValueError):
+        utils.get_edge_label(2, 3, test)
+        utils.get_edge_label(2, 4, test)
+
+
+def test_is_without_edge():
+    test = nx.Graph()
+    test.add_node(1)
+    test.add_node(2)
+    assert utils.is_without_edge(test) is True
+
+    test.add_edge(1, 2)
+    assert utils.is_without_edge(test) is False
