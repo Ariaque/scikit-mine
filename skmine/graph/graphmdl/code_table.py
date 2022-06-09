@@ -46,22 +46,21 @@ def is_node_marked(node_number, graph, cover_marker, label):
         raise ValueError()
 
 
-def mark_node(node_number, graph, cover_marker, pattern):
+def mark_node(node_number, graph, cover_marker, label):
     """ Mark a node in the graph by the cover marker
     Parameters
     ---------
     node_number
     graph
     cover_marker
-    pattern
+    label
     """
 
-    if 'label' in pattern.nodes(data=True)[node_number]:
-        label = pattern.nodes(data=True)[node_number]['label']
+    if label is not None:
         # check if the pattern node are many labels
         if type(label) is tuple:  # if yes, mark each label if it is a graph node label
             for j in label:
-                if j in graph.nodes(data=True)[node_number]:
+                if j in graph.nodes(data=True)[node_number]['label']:
                     if 'cover_mark' in graph.nodes(data=True)[node_number]:
                         graph.nodes(data=True)[node_number]['cover_mark'][j] = cover_marker
                     else:
@@ -92,7 +91,7 @@ def is_edge_marked(start, end, graph, cover_marker, label):
       bool
       """
     if start in graph.nodes() and \
-        end in graph.nodes() and \
+            end in graph.nodes() and \
             graph[start][end] is not None and 'label' in graph[start][end]:
 
         edge = graph[start][end]
@@ -106,7 +105,7 @@ def is_edge_marked(start, end, graph, cover_marker, label):
         raise ValueError()
 
 
-def mark_edge(start, end, graph, cover_marker, pattern):
+def mark_edge(start, end, graph, cover_marker, label):
     """ Mark an edge in the graph by the cover marker
     Parameters
     ---------
@@ -114,13 +113,16 @@ def mark_edge(start, end, graph, cover_marker, pattern):
     end
     graph
     cover_marker
-    pattern
+    label
     """
-    label = pattern[start][end]['label']
-    if 'cover_mark' in graph[start][end]:
-        graph[start][end]['cover_mark'][label] = cover_marker
+    if label is not None and label in graph[start][end]['label']:
+        if 'cover_mark' in graph[start][end]:
+            graph[start][end]['cover_mark'][label] = cover_marker
+        else:
+            graph[start][end]['cover_mark'] = {label: cover_marker}
+
     else:
-        graph[start][end]['cover_mark'] = {label: cover_marker}
+        raise ValueError()
 
 
 def is_embedding_marked(embedding, pattern, graph, cover_marker):
@@ -137,13 +139,14 @@ def is_embedding_marked(embedding, pattern, graph, cover_marker):
     bool
     """
     keys = list(embedding.keys())
+    values = list(embedding.values())
     i = 0
     while i < len(keys) - 1:
         if i != len(keys):
-            label = utils.get_edge_label(embedding[i], embedding[i + 1], 0, pattern)
-            if 'cover_mark' in graph[i][i + 1] \
-                    and label in graph[i][i + 1]['cover_mark'] \
-                    and graph[i][i + 1]['cover_mark'][label] == cover_marker:
+            label = utils.get_edge_label(values[i], values[i + 1], pattern)
+            if 'cover_mark' in graph[keys[i]][keys[i + 1]] \
+                    and label in graph[keys[i]][keys[i + 1]]['cover_mark'] \
+                    and is_edge_marked(keys[i], keys[i + 1], graph, cover_marker, label):
                 return True
             else:
                 return False
@@ -161,13 +164,18 @@ def mark_embedding(embedding, graph, pattern, cover_marker):
     """
 
     keys = list(embedding.keys())
+    values = list(embedding.values())
     i = 0
-    while i < len(keys) - 1:
-        if i != len(keys):
-            mark_edge(i, i + 1, graph, cover_marker, pattern)
-            mark_node(i, graph, cover_marker, pattern)
+    while i <= len(keys) - 1:
+        if i != len(keys) - 1:
+            mark_edge(keys[i], keys[i + 1], graph, cover_marker, pattern[values[i]][values[i + 1]]['label'])
+
+            if 'label' in pattern.nodes(data=True)[values[i]]:
+                mark_node(keys[i], graph, cover_marker, pattern.nodes(data=True)[values[i]]['label'])
+
         else:
-            mark_node(i, graph, cover_marker, pattern)
+            if 'label' in pattern.nodes(data=True)[values[i]]:
+                mark_node(keys[i], graph, cover_marker, pattern.nodes(data=True)[values[i]]['label'])
 
         i = i + 1
 
@@ -182,25 +190,35 @@ def get_node_label_number(node_number, graph):
     ---------
     int
     """
-    return len(graph.nodes(data=True)[node_number]['label'])
+    if node_number in graph.nodes():
+        if 'label' in graph.nodes(data=True)[node_number]:
+            return len(graph.nodes(data=True)[node_number]['label'])
+        else:
+            return 0
+    else:
+        raise ValueError()
 
 
-def search_data_port(graph, pattern):
+def search_data_port(graph, pattern, embedding):
     """ Search all node who are port for data
     Parameters
     ----------
     graph
     pattern
+    embedding
     """
-    for node in graph.nodes(data=True):  # get all node in the graph
-        if 'cover_mark' in node[1]:  # check if the node is marked
+    keys = list(embedding.keys())
+    values = list(embedding.values())
+    i = 0
+    while i <= len(keys) - 1:  # get all node in the graph
+        if 'cover_mark' in graph.nodes[keys[i]]:  # check if the node is marked
             # if the node is marked, compare the number of marked label
             # and the number of pattern node label
             # The node is a port if the two number are different
-            if get_node_label_number(node[0], pattern) \
-                    != len(node[1]['cover_mark']):
-                if 'port' not in node[1]:  # if the node is not already marked as port
-                    node[1]['port'] = True  # mark it
+            if get_node_label_number(values[i], pattern) != len(graph.nodes[keys[i]]['cover_mark']):
+                if 'port' not in graph.nodes[keys[i]]:  # if the node is not already marked as port
+                    graph.nodes[keys[i]]['port'] = True  # mark it
+        i = i + 1
 
 
 def is_node_edges_marked(graph, node_number, cover_marker, pattern):
@@ -216,15 +234,21 @@ def is_node_edges_marked(graph, node_number, cover_marker, pattern):
     ---------
     bool
     """
-    for edge in graph.edges(node_number):
-        label = utils.get_edge_label(edge[0], edge[1], pattern)
-        if 'cover_mark' in graph[edge[0]][edge[1]]:
-            if graph[edge[0]][edge[1]]['cover_mark'][label] == cover_marker:
-                return True
+    if len(graph.edges(node_number)) != 0:
+        for edge in graph.edges(node_number):
+            if edge[0] in pattern.nodes() and edge[1] in pattern.nodes() and pattern[edge[0]][edge[1]] is not None:
+                label = utils.get_edge_label(edge[0], edge[1], pattern)
+                if 'cover_mark' in graph[edge[0]][edge[1]]:
+                    if graph[edge[0]][edge[1]]['cover_mark'][label] == cover_marker:
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
             else:
                 return False
-        else:
-            return False
+    else:
+        return True
 
 
 def row_cover(row: CodeTableRow, graph, cover_marker):
@@ -242,17 +266,19 @@ def row_cover(row: CodeTableRow, graph, cover_marker):
             if not is_embedding_marked(embedding, row.pattern(), graph, cover_marker):
                 mark_embedding(embedding, graph, row.pattern(), cover_marker)
                 cover_usage = cover_usage + 1
-                # Search pattern ports
-            for node in row.pattern().nodes(data=True):
-                if not is_node_edges_marked(graph, node[0], cover_marker, row.pattern()):
-                    if node[0] in port_usage:
-                        port_usage[node[0]] = port_usage[node[0]] + 1
-                    else:
-                        port_usage[node[0]] = 1
 
-        search_data_port(graph, row.pattern())  # search data ports
+            # Search pattern ports
+            keys = embedding.keys()
+            for i in keys:
+                if not is_node_edges_marked(graph, i, cover_marker, row.pattern()):
+                    if i in port_usage:
+                        port_usage[i] = port_usage[i] + 1
+                    else:
+                        port_usage[i] = 1
+            search_data_port(graph, row.pattern(), embedding)  # search data ports
     else:
-        raise NotImplemented()
+        # ToDo: implements cover for pattern without edge
+        raise ValueError()
 
 
 class CodeTable:
