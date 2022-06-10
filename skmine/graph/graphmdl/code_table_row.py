@@ -41,6 +41,14 @@ class CodeTableRow:
         """
         return self._pattern_port_code
 
+    def set_pattern_port_code(self, port_code):
+        """ set the port code of the row pattern
+        Parameters
+        ---------
+        port_code
+        """
+        self._pattern_port_code = port_code
+
     def set_embeddings(self, embeddings):
         """ Set the pattern row embeddings
         Parameters

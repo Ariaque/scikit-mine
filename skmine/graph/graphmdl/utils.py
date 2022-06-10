@@ -5,22 +5,18 @@ import networkx as nx
 from networkx import Graph
 from networkx.algorithms import isomorphism as iso
 
-""" Compute description length
-  
-  Parameters
-  -----------
-  value : double 
-      a label instance number
-  total : double 
-      total number of label
-      
-  Returns
-  -------
-    float   .
-"""
-
 
 def log2(value, total):
+    """ Compute log2
+    Parameters
+    ----------
+    value
+    total
+
+    Returns
+    -------
+    float
+    """
     return -math.log2(value / total)
 
 
@@ -126,7 +122,7 @@ def universal_integer_encoding(x):
       int
     """
     if x < 1:
-        raise ValueError()
+        raise ValueError(f"{x} should be higher than 1")
     else:
         return math.floor(math.log2(x)) + 2 * math.floor(math.log2(math.floor(math.log2(x)) + 1)) + 1
 
@@ -143,7 +139,7 @@ def universal_integer_encoding_with0(x):
     int
     """
     if x < 0:
-        raise ValueError()
+        raise ValueError(f"{x} should be higher than 0")
     else:
         return universal_integer_encoding(x + 1)
 
@@ -208,7 +204,7 @@ def encode_vertex_singleton(standard_table, vertex_label):
         float
     """
     if vertex_label == "":
-        raise ValueError()
+        raise ValueError(f"{vertex_label} shouldn't be empty ")
     else:
         # Get total number of label in the standard table
         total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
@@ -235,7 +231,7 @@ def encode_edge_singleton(standard_table, edge_label):
             float
     """
     if edge_label == "":
-        raise ValueError()
+        raise ValueError(f"{edge_label} shouldn't be empty")
     else:
         # Get total number of label in the standard table
         total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
@@ -363,20 +359,22 @@ def get_support(embeddings):
     Returns
     -------
     int
-
     """
-    node_embeddings = dict()
-    for e in embeddings:
-        for i in e.items():
-            if i[1] in node_embeddings:
-                node_embeddings[i[1]].add(i[0])
-            else:
-                node_embeddings[i[1]] = set()
-    embed = dict()
-    for key, value in node_embeddings.items():
-        embed[key] = len(value)
+    if len(embeddings) != 0:
+        node_embeddings = dict()
+        for e in embeddings:
+            for i in e.items():
+                if i[1] in node_embeddings:
+                    node_embeddings[i[1]].add(i[0])
+                else:
+                    node_embeddings[i[1]] = set()
+        embed = dict()
+        for key, value in node_embeddings.items():
+            embed[key] = len(value)
 
-    return min(embed.values())
+        return min(embed.values())
+    else:
+        raise ValueError("embeddings shouldn't be empty")
 
 
 def get_label_index(label, values):
@@ -392,7 +390,7 @@ def get_label_index(label, values):
     if label in values:
         return values.index(label)
     else:
-        raise ValueError()
+        raise ValueError(f"{label} should be in the {values}")
 
 
 def get_node_label(key, index, graph):
@@ -409,7 +407,7 @@ def get_node_label(key, index, graph):
     if len(graph.nodes(data=True)[key]['label']) > index and key in graph.nodes():
         return graph.nodes(data=True)[key]['label'][index]
     else:
-        raise ValueError()
+        raise ValueError(f"{index} shouldn't be out of bounds and {key} should be a graph node")
 
 
 def get_edge_label(start, end, graph):
@@ -428,7 +426,7 @@ def get_edge_label(start, end, graph):
     if graph[start][end] is not None and 'label' in graph[start][end]:
         return graph[start][end]['label']
     else:
-        raise ValueError()
+        raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
 
 
 def is_without_edge(pattern):

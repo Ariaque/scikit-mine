@@ -2,6 +2,7 @@ import networkx as nx
 import pytest
 from ..code_table import *
 from ..code_table_row import CodeTableRow
+from ..standard_table import StandardTable
 
 
 def test_is_node_marked():
@@ -150,13 +151,41 @@ def test_is_node_edges_marked():
     assert is_node_edges_marked(gtest, 2, 1, pattern) is False
 
 
+test = nx.Graph()
+
+
+def test_is_node_labels_marked():
+    test.add_node(1, label='x')
+    test.add_node(3, label='y')
+    test.add_node(2)
+    test.nodes()[2]['label'] = 'x', 'y'
+    test.add_edge(1, 2, label='e')
+    test.add_edge(2, 3, label='e')
+
+    mark_node(2, test, 1, 'x')
+    mark_node(1, test, 1, 'x')
+
+    assert is_node_labels_marked(2, test, 1) is False
+    assert is_node_labels_marked(1, test, 1) is True
+
+
 def test_row_cover():
     ptest = nx.Graph()
     ptest.add_node(1, label='x')
-    row_test = CodeTableRow(ptest)
 
-    with pytest.raises(ValueError):
-        row_cover(row_test, gtest, 1)
+    test.add_node(1, label='x')
+    test.add_node(3, label='y')
+    test.add_node(2)
+    test.nodes()[2]['label'] = 'x', 'y'
+    test.add_edge(1, 2, label='e')
+    test.add_edge(2, 3, label='e')
+
+    row_test = CodeTableRow(ptest)
+    row_test.set_embeddings(utils.get_embeddings(ptest, test))
+    # with pytest.raises(ValueError):
+    row_cover(row_test, test, 1)
+    assert is_node_marked(1, test, 1, ptest.nodes(data=True)[1]['label']) is True
+    assert is_node_marked(2, test, 1, ptest.nodes(data=True)[1]['label']) is True
 
     row = CodeTableRow(pattern)
     row.set_embeddings(embeddings)
@@ -171,3 +200,26 @@ def test_row_cover():
             assert is_node_marked(node[0], gtest, 1, node[1]['label']) is True
         else:
             assert is_node_marked(node[0], gtest, 1, node[1]['label']) is False
+
+
+standard_table = StandardTable(gtest)
+code_table = CodeTable(standard_table, gtest)
+
+
+def test_rows():
+    assert len(code_table.rows()) == 0
+
+
+def test_add_row():
+    row1 = CodeTableRow(pattern)
+
+    pattern2 = nx.DiGraph()
+    pattern2.add_node(1, label='B')
+
+    row2 = CodeTableRow(pattern2)
+
+    code_table.add_row(row1)
+    code_table.add_row(row2)
+
+    assert len(code_table.rows()[0].pattern().nodes()) == 2
+    assert len(code_table.rows()[1].pattern().nodes()) == 1

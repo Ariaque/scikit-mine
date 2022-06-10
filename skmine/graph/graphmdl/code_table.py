@@ -43,7 +43,7 @@ def is_node_marked(node_number, graph, cover_marker, label):
         else:
             return False
     else:
-        raise ValueError()
+        raise ValueError(f"{node_number} must be a graph node and {label} a node label")
 
 
 def mark_node(node_number, graph, cover_marker, label):
@@ -73,7 +73,7 @@ def mark_node(node_number, graph, cover_marker, label):
             else:
                 graph.nodes(data=True)[node_number]['cover_mark'] = {label: cover_marker}
     else:
-        raise ValueError()
+        raise ValueError("label mustn't be empty or none")
 
 
 def is_edge_marked(start, end, graph, cover_marker, label):
@@ -102,7 +102,8 @@ def is_edge_marked(start, end, graph, cover_marker, label):
         else:
             return False
     else:
-        raise ValueError()
+        raise ValueError(f"{start} and {end} must be a graph node and {start}-{end} a graph edge."
+                         f"Also the edge must have a label ")
 
 
 def mark_edge(start, end, graph, cover_marker, label):
@@ -122,7 +123,7 @@ def mark_edge(start, end, graph, cover_marker, label):
             graph[start][end]['cover_mark'] = {label: cover_marker}
 
     else:
-        raise ValueError()
+        raise ValueError("label mustn't be empty or none and must be an edge label ")
 
 
 def is_embedding_marked(embedding, pattern, graph, cover_marker):
@@ -196,7 +197,7 @@ def get_node_label_number(node_number, graph):
         else:
             return 0
     else:
-        raise ValueError()
+        raise ValueError(f"{node_number} must be a graph node")
 
 
 def search_data_port(graph, pattern, embedding):
@@ -221,34 +222,52 @@ def search_data_port(graph, pattern, embedding):
         i = i + 1
 
 
-def is_node_edges_marked(graph, node_number, cover_marker, pattern):
+def is_node_edges_marked(graph, node_number, cover_marker):
     """ Check if all edges of a given node in a given graph are covered
     Parameters
     ----------
     graph
     node_number
     cover_marker
-    pattern
 
     Returns
     ---------
     bool
     """
-    if len(graph.edges(node_number)) != 0:
+    if len(graph.edges(node_number)) != 0:  # check if the node have edge
         for edge in graph.edges(node_number):
-            if edge[0] in pattern.nodes() and edge[1] in pattern.nodes() and pattern[edge[0]][edge[1]] is not None:
-                label = utils.get_edge_label(edge[0], edge[1], pattern)
-                if 'cover_mark' in graph[edge[0]][edge[1]]:
-                    if graph[edge[0]][edge[1]]['cover_mark'][label] == cover_marker:
-                        return True
-                    else:
-                        return False
+            label = utils.get_edge_label(edge[0], edge[1], graph)
+            if 'cover_mark' in graph[edge[0]][edge[1]]:
+                if graph[edge[0]][edge[1]]['cover_mark'][label] == cover_marker:
+                    return True
                 else:
                     return False
             else:
                 return False
     else:
         return True
+
+
+def is_node_labels_marked(node_number, graph, cover_marker):
+    """ Check if all node labels are marked by the cover_marker
+    Parameters
+    ----------
+    node_number
+    graph
+    cover_marker
+
+    Returns
+    --------
+    bool"""
+
+    if node_number in graph.nodes() and 'label' in graph.nodes(data=True)[node_number]:
+        response = False
+        for label in graph.nodes(data=True)[node_number]['label']:
+            response = is_node_marked(node_number, graph, cover_marker, label)
+
+        return response
+    else:
+        raise ValueError(f"{node_number} must be a graph node and must have a label ")
 
 
 def row_cover(row: CodeTableRow, graph, cover_marker):
@@ -270,15 +289,35 @@ def row_cover(row: CodeTableRow, graph, cover_marker):
             # Search pattern ports
             keys = embedding.keys()
             for i in keys:
-                if not is_node_edges_marked(graph, i, cover_marker, row.pattern()):
+                if not is_node_edges_marked(graph, i, cover_marker):
                     if i in port_usage:
                         port_usage[i] = port_usage[i] + 1
                     else:
                         port_usage[i] = 1
             search_data_port(graph, row.pattern(), embedding)  # search data ports
     else:
-        # ToDo: implements cover for pattern without edge
-        raise ValueError()
+        for embedding in row.embeddings():
+            keys = list(embedding.keys())
+            values = list(embedding.values())
+            i = 0
+            while i <= len(keys) - 1:
+                for label in row.pattern().nodes(data=True)[values[i]]['label']:
+                    if not is_node_marked(keys[i], graph, cover_marker, label):
+                        mark_node(keys[i], graph, cover_marker, label)
+                        cover_usage = cover_usage + 1
+                i = i + 1
+            # Search pattern ports
+            for n in keys:
+                if not is_node_labels_marked(n, graph, cover_marker):
+                    if n in port_usage:
+                        port_usage[n] = port_usage[n] + 1
+                    else:
+                        port_usage[n] = 1
+
+            search_data_port(graph, row.pattern(), embedding)  # search data ports
+
+    row.set_pattern_port_code(port_usage)
+    row.set_pattern_code(cover_usage)
 
 
 class CodeTable:
@@ -299,8 +338,39 @@ class CodeTable:
         row
         """
         self._rows.append(row)  # Add the new row at the end of the list
-        # sort the list who contains the row according a reverse order and a specific key
-        self._rows.sort(reverse=True, key=_order_rows)
 
         # compute the row pattern embeddings and store them
         row.set_embeddings(utils.get_embeddings(row.pattern(), self._data_graph))
+
+        # sort the list who contains the row according a reverse order and a specific key
+        self._rows.sort(reverse=True, key=_order_rows)
+
+    def rows(self):
+        """ Provide code table rows
+        Returns
+        -------
+        list
+        """
+        return self._rows
+
+    def cover(self, cover_marker):
+        """ Make the cover for the code table
+        Parameters
+        ----------
+        cover_marker
+        """
+        for row in self._rows:
+            row_cover(row, self._data_graph, cover_marker)
+
+    def data_port(self):
+        """ Provide all graph data port
+        Returns
+        -------
+        list
+        """
+        data_port = []
+        for node in self._data_graph.nodes(data=True):
+            if 'port' in node:
+                data_port.append(node[0])
+
+        return data_port
