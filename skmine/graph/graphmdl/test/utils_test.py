@@ -148,6 +148,23 @@ def test_get_embeddings():
     assert utils.get_embeddings(pattern, ng)[5][5] == 1
     assert utils.get_embeddings(pattern, ng)[5][2] == 2
 
+    test1 = nx.Graph()
+    ptest1 = nx.Graph()
+    test1.add_node(1)
+    test1.nodes[1]['label'] = 'w', 'x', 'y'
+    ptest1.add_node(1)
+    ptest1.nodes[1]['label'] = 'w', 'x'
+
+    assert len(utils.get_embeddings(ptest1, test1)) != 0
+    assert len(utils.get_embeddings(test1, ptest1)) == 0
+
+    test2 = nx.Graph()
+    test2.add_node(1)
+    ptest2 = nx.Graph()
+    ptest2.add_node(1, label='x')
+    assert len(utils.get_embeddings(ptest2, test2)) == 0
+    assert len(utils.get_embeddings(test2, ptest2)) != 0
+
 
 def test_is_vertex_singleton():
     g1 = nx.DiGraph()

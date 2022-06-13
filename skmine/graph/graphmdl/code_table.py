@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from .code_table_row import CodeTableRow
 import skmine.graph.graphmdl.utils as utils
 
@@ -17,7 +19,7 @@ def _order_rows(row: CodeTableRow):
 
 
 def is_node_marked(node_number, graph, cover_marker, label):
-    """ Check if a node is already marked
+    """ Check if a particular node label  is already marked
     Parameters
     -----------
     node_number
@@ -31,9 +33,7 @@ def is_node_marked(node_number, graph, cover_marker, label):
     """
     if node_number in graph.nodes() and \
             label in graph.nodes(data=True)[node_number]['label']:
-
         node = graph.nodes(data=True)[node_number]
-
         if 'cover_mark' in node \
                 and label in node['cover_mark'] \
                 and node['cover_mark'][label] == cover_marker:
@@ -44,6 +44,27 @@ def is_node_marked(node_number, graph, cover_marker, label):
             return False
     else:
         raise ValueError(f"{node_number} must be a graph node and {label} a node label")
+
+
+def is_node_labels_marked(node_number, graph, cover_marker, labels):
+    """ Check if one or more particular node label are marked
+    Parameters
+    -----------
+    node_number
+    graph
+    cover_marker
+    labels
+    Returns
+    --------
+    bool"""
+    if type(labels) is tuple:
+        res = list()
+        for label in labels:
+            res.append(is_node_marked(node_number, graph, cover_marker, label))
+
+        return not (False in res)
+    else:
+        return is_node_marked(node_number, graph, cover_marker, labels)
 
 
 def mark_node(node_number, graph, cover_marker, label):
@@ -200,26 +221,36 @@ def get_node_label_number(node_number, graph):
         raise ValueError(f"{node_number} must be a graph node")
 
 
-def search_data_port(graph, pattern, embedding):
-    """ Search all node who are port for data
+def search_port(graph, embedding, cover_marker, port_usage):
+    """ Search all node who are port for data or for pattern
     Parameters
     ----------
     graph
-    pattern
     embedding
+    cover_marker
+    port_usage
+    Returns
+    -------
+    dict
     """
+    # Search pattern ports
     keys = list(embedding.keys())
     values = list(embedding.values())
     i = 0
-    while i <= len(keys) - 1:  # get all node in the graph
-        if 'cover_mark' in graph.nodes[keys[i]]:  # check if the node is marked
-            # if the node is marked, compare the number of marked label
-            # and the number of pattern node label
-            # The node is a port if the two number are different
-            if get_node_label_number(values[i], pattern) != len(graph.nodes[keys[i]]['cover_mark']):
-                if 'port' not in graph.nodes[keys[i]]:  # if the node is not already marked as port
-                    graph.nodes[keys[i]]['port'] = True  # mark it
-        i = i + 1
+    while i <= len(keys) - 1:
+        if not is_node_edges_marked(graph, keys[i], cover_marker) \
+                or not is_node_all_labels_marked(keys[i], graph, cover_marker):
+
+            if 'port' not in graph.nodes[keys[i]]:  # if the node is not already marked as port
+                graph.nodes[keys[i]]['port'] = True  # mark it
+
+            if values[i] in port_usage:
+                port_usage[values[i]] = port_usage[values[i]] + 1
+            else:
+                port_usage[values[i]] = 1
+        i += 1
+
+    return port_usage
 
 
 def is_node_edges_marked(graph, node_number, cover_marker):
@@ -235,20 +266,22 @@ def is_node_edges_marked(graph, node_number, cover_marker):
     bool
     """
     if len(graph.edges(node_number)) != 0:  # check if the node have edge
+        res = []
         for edge in graph.edges(node_number):
             label = utils.get_edge_label(edge[0], edge[1], graph)
             if 'cover_mark' in graph[edge[0]][edge[1]]:
                 if graph[edge[0]][edge[1]]['cover_mark'][label] == cover_marker:
-                    return True
+                    res.append(True)
                 else:
-                    return False
+                    res.append(False)
             else:
-                return False
+                res.append(False)
+        return not (False in res)
     else:
         return True
 
 
-def is_node_labels_marked(node_number, graph, cover_marker):
+def is_node_all_labels_marked(node_number, graph, cover_marker):
     """ Check if all node labels are marked by the cover_marker
     Parameters
     ----------
@@ -260,12 +293,15 @@ def is_node_labels_marked(node_number, graph, cover_marker):
     --------
     bool"""
 
-    if node_number in graph.nodes() and 'label' in graph.nodes(data=True)[node_number]:
-        response = False
-        for label in graph.nodes(data=True)[node_number]['label']:
-            response = is_node_marked(node_number, graph, cover_marker, label)
+    if node_number in graph.nodes():
+        if 'label' in graph.nodes(data=True)[node_number]:
+            response = False
+            for label in graph.nodes(data=True)[node_number]['label']:
+                response = is_node_marked(node_number, graph, cover_marker, label)
 
-        return response
+            return response
+        else:
+            return True
     else:
         raise ValueError(f"{node_number} must be a graph node and must have a label ")
 
@@ -285,39 +321,42 @@ def row_cover(row: CodeTableRow, graph, cover_marker):
             if not is_embedding_marked(embedding, row.pattern(), graph, cover_marker):
                 mark_embedding(embedding, graph, row.pattern(), cover_marker)
                 cover_usage = cover_usage + 1
+            search_port(graph, embedding, cover_marker, port_usage)
 
-            # Search pattern ports
-            keys = embedding.keys()
-            for i in keys:
-                if not is_node_edges_marked(graph, i, cover_marker):
-                    if i in port_usage:
-                        port_usage[i] = port_usage[i] + 1
-                    else:
-                        port_usage[i] = 1
-            search_data_port(graph, row.pattern(), embedding)  # search data ports
     else:
         for embedding in row.embeddings():
             keys = list(embedding.keys())
             values = list(embedding.values())
             i = 0
             while i <= len(keys) - 1:
-                for label in row.pattern().nodes(data=True)[values[i]]['label']:
-                    if not is_node_marked(keys[i], graph, cover_marker, label):
-                        mark_node(keys[i], graph, cover_marker, label)
-                        cover_usage = cover_usage + 1
-                i = i + 1
-            # Search pattern ports
-            for n in keys:
-                if not is_node_labels_marked(n, graph, cover_marker):
-                    if n in port_usage:
-                        port_usage[n] = port_usage[n] + 1
-                    else:
-                        port_usage[n] = 1
+                label = row.pattern().nodes(data=True)[values[i]]['label']
+                # check if all pattern node labels are marked in the graph node
+                if not is_node_labels_marked(keys[i], graph, cover_marker, label):
+                    mark_node(keys[i], graph, cover_marker, label)
+                    cover_usage = cover_usage + 1
 
-            search_data_port(graph, row.pattern(), embedding)  # search data ports
+                i = i + 1
+            search_port(graph, embedding, cover_marker, port_usage)
 
     row.set_pattern_port_code(port_usage)
     row.set_pattern_code(cover_usage)
+
+
+def singleton_cover(graph, cover_marker):
+    edge_singleton_usage = defaultdict(int)
+    vertex_singleton_usage = defaultdict(int)
+
+    # for edge label
+    for edge in graph.edges(data=True):
+        if not is_edge_marked(edge[0], edge[1], graph, cover_marker, edge['label']):
+            edge_singleton_usage[edge['label']] += 1
+    # for node label
+    for node in graph.nodes(data=True):
+        for label in node['label']:
+            if not is_node_marked(node[0], graph, cover_marker, label):
+                vertex_singleton_usage[label] += 1
+
+    return vertex_singleton_usage, edge_singleton_usage
 
 
 class CodeTable:

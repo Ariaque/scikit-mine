@@ -19,6 +19,21 @@ def test_is_node_marked():
     assert is_node_marked(1, test, 1, 'x') is True
 
 
+def test_is_node_labels_marked():
+    test = nx.Graph()
+    test.add_node(1)
+    test.nodes[1]['label'] = 'x', 'w'
+
+    with pytest.raises(ValueError):
+        is_node_labels_marked(6, test, 1, 'x')
+        is_node_labels_marked(1, test, 1, 'a')
+
+    test.nodes[1]['cover_mark'] = {'x': 1}
+    assert is_node_labels_marked(1, test, 1, ('x', 'w')) is False
+    test.nodes[1]['cover_mark'] = {'x': 1, 'w': 1}
+    assert is_node_labels_marked(1, test, 1, ('x', 'w')) is True
+
+
 def test_is_edge_marked():
     test = nx.Graph()
     test.add_node(range(1, 3))
@@ -136,25 +151,39 @@ def test_get_node_label_number():
     assert get_node_label_number(2, test) == 0
 
 
-def test_search_data_port():
-    pattern.nodes[1]['label'] = pattern.nodes[1]['label'], 'B'
+def test_search_port():
+    test1 = nx.DiGraph()
+    test1.add_node(40, label='x')
+    test1.add_node(41)
+    test1.add_node(42)
+    test1.add_node(43, label='y')
+    test1.add_edge(40, 41, label='a')
+    test1.add_edge(40, 42, label='a')
+    test1.add_edge(40, 43, label='a')
+    ptest1 = nx.DiGraph()
+    ptest1.add_node(1, label='x')
+    ptest1.add_node(2)
+    ptest1.add_edge(1, 2, label='a')
 
-    mark_embedding(embeddings[0], gtest, pattern, 1)
-    search_data_port(gtest, pattern, embeddings[0])
-    assert ('port' in gtest.nodes[1]) is True
+    embed = utils.get_embeddings(ptest1, test1)
+    mark_embedding(embed[0], test1, ptest1, 1)
+    assert (1 in search_port(test1, embed[0], 1, dict()).keys()) is True
+    mark_embedding(embed[1], test1, ptest1, 1)
+    port_usage = search_port(test1, embed[0], 1, dict())
+    assert search_port(test1, embed[1], 1, port_usage)[1] == 2
 
 
 def test_is_node_edges_marked():
     mark_embedding(embeddings[0], gtest, pattern, 1)
 
-    assert is_node_edges_marked(gtest, 1, 1, pattern) is True
-    assert is_node_edges_marked(gtest, 2, 1, pattern) is False
+    assert is_node_edges_marked(gtest, 1, 1) is True
+    assert is_node_edges_marked(gtest, 2, 1) is False
 
 
 test = nx.Graph()
 
 
-def test_is_node_labels_marked():
+def test_is_node_all_labels_marked():
     test.add_node(1, label='x')
     test.add_node(3, label='y')
     test.add_node(2)
@@ -165,8 +194,8 @@ def test_is_node_labels_marked():
     mark_node(2, test, 1, 'x')
     mark_node(1, test, 1, 'x')
 
-    assert is_node_labels_marked(2, test, 1) is False
-    assert is_node_labels_marked(1, test, 1) is True
+    assert is_node_all_labels_marked(2, test, 1) is False
+    assert is_node_all_labels_marked(1, test, 1) is True
 
 
 def test_row_cover():
@@ -223,3 +252,36 @@ def test_add_row():
 
     assert len(code_table.rows()[0].pattern().nodes()) == 2
     assert len(code_table.rows()[1].pattern().nodes()) == 1
+
+
+graph = nx.DiGraph()
+graph.add_nodes_from(range(1, 9))
+graph.add_edge(2, 1, label='a')
+graph.add_edge(4, 1, label='a')
+graph.add_edge(6, 1, label='a')
+graph.add_edge(6, 8, label='a')
+graph.add_edge(8, 6, label='a')
+graph.add_edge(1, 3, label='b')
+graph.add_edge(1, 5, label='b')
+graph.add_edge(1, 7, label='b')
+graph.nodes[1]['label'] = 'y'
+graph.nodes[2]['label'] = 'x'
+graph.nodes[3]['label'] = 'z'
+graph.nodes[4]['label'] = 'x'
+graph.nodes[5]['label'] = 'z'
+graph.nodes[6]['label'] = 'x'
+graph.nodes[7]['label'] = 'z'
+graph.nodes[8]['label'] = 'w', 'x'
+
+
+def test_cover():
+    pattern_1 = nx.DiGraph()
+    pattern_1.add_node(range(1, 4))
+    pattern_1.add_edge(1, 2, label='a')
+    pattern_1.add_edge(2, 3, label='b')
+    pattern_1.nodes[1]['label'] = 'x'
+    pattern_1.nodes[2]['label'] = 'y'
+    pattern_1.nodes[3]['label'] = 'z'
+
+    pattern_2 = nx.DiGraph()
+    pattern_2.add_node(1, label='w')

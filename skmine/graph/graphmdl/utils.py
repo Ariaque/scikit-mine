@@ -275,13 +275,16 @@ def get_embeddings(pattern, graph):
     -------
     list
     """
+
     # Create functions to compare node and edge label
     def node_match(n1, n2):
         if 'label' in n1 and 'label' in n2:
             res = list()
-            for i in n1['label']:
-                res.append(i in n2['label'])
-            return True in res
+            for i in n2['label']:
+                res.append(i in n1['label'])
+            return not (False in res)
+        elif 'label' not in n1 and 'label' in n2:
+            return False
         else:
             return True
 
@@ -339,7 +342,7 @@ def is_edge_singleton(pattern):
                 and "label" not in pattern.nodes(data=True)[2]:
             # Check if the edge have exactly one label
             if count_edge_label(pattern) is not None \
-                    and len(count_edge_label(pattern).values()) == 1\
+                    and len(count_edge_label(pattern).values()) == 1 \
                     and list(count_edge_label(pattern).values())[0] == 1:
                 return True
             else:
