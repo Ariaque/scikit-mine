@@ -163,16 +163,18 @@ def is_embedding_marked(embedding, pattern, graph, cover_marker):
     keys = list(embedding.keys())
     values = list(embedding.values())
     i = 0
+    res = []
     while i < len(keys) - 1:
         if i != len(keys):
             label = utils.get_edge_label(values[i], values[i + 1], pattern)
             if 'cover_mark' in graph[keys[i]][keys[i + 1]] \
                     and label in graph[keys[i]][keys[i + 1]]['cover_mark'] \
                     and is_edge_marked(keys[i], keys[i + 1], graph, cover_marker, label):
-                return True
+                res.append(True)
             else:
-                return False
+                res.append(False)
         i = i + 1
+    return True in res
 
 
 def mark_embedding(embedding, graph, pattern, cover_marker):
@@ -234,8 +236,8 @@ def search_port(graph, embedding, cover_marker, port_usage):
     dict
     """
     # Search pattern ports
-    keys = list(embedding.keys())
-    values = list(embedding.values())
+    keys = list(embedding.keys())  # node number in graph
+    values = list(embedding.values())  # node number in pattern
     i = 0
     while i <= len(keys) - 1:
         if not is_node_edges_marked(graph, keys[i], cover_marker) \
@@ -295,11 +297,11 @@ def is_node_all_labels_marked(node_number, graph, cover_marker):
 
     if node_number in graph.nodes():
         if 'label' in graph.nodes(data=True)[node_number]:
-            response = False
+            response = []
             for label in graph.nodes(data=True)[node_number]['label']:
-                response = is_node_marked(node_number, graph, cover_marker, label)
+                response.append(is_node_marked(node_number, graph, cover_marker, label))
 
-            return response
+            return not (False in response)
         else:
             return True
     else:
@@ -320,8 +322,8 @@ def row_cover(row: CodeTableRow, graph, cover_marker):
         for embedding in row.embeddings():
             if not is_embedding_marked(embedding, row.pattern(), graph, cover_marker):
                 mark_embedding(embedding, graph, row.pattern(), cover_marker)
+                search_port(graph, embedding, cover_marker, port_usage)
                 cover_usage = cover_usage + 1
-            search_port(graph, embedding, cover_marker, port_usage)
 
     else:
         for embedding in row.embeddings():
@@ -332,29 +334,41 @@ def row_cover(row: CodeTableRow, graph, cover_marker):
                 label = row.pattern().nodes(data=True)[values[i]]['label']
                 # check if all pattern node labels are marked in the graph node
                 if not is_node_labels_marked(keys[i], graph, cover_marker, label):
-                    mark_node(keys[i], graph, cover_marker, label)
+                    search_port(graph, embedding, cover_marker, port_usage)
                     cover_usage = cover_usage + 1
+                    mark_node(keys[i], graph, cover_marker, label)
 
                 i = i + 1
-            search_port(graph, embedding, cover_marker, port_usage)
 
     row.set_pattern_port_code(port_usage)
     row.set_pattern_code(cover_usage)
 
 
 def singleton_cover(graph, cover_marker):
+    """ Cover the code table with the singleton pattern
+    Parameters
+    -----------
+    graph
+    cover_marker
+    Returns
+    --------
+    tuple : who contains first dictionary for vertex usage and other for edge usage
+    """
     edge_singleton_usage = defaultdict(int)
     vertex_singleton_usage = defaultdict(int)
 
     # for edge label
     for edge in graph.edges(data=True):
-        if not is_edge_marked(edge[0], edge[1], graph, cover_marker, edge['label']):
-            edge_singleton_usage[edge['label']] += 1
+        if not is_edge_marked(edge[0], edge[1], graph, cover_marker, edge[2]['label']):
+            edge_singleton_usage[edge[2]['label']] += 1
+            mark_edge(edge[0], edge[1], graph, cover_marker, edge[2]['label'])
     # for node label
     for node in graph.nodes(data=True):
-        for label in node['label']:
-            if not is_node_marked(node[0], graph, cover_marker, label):
-                vertex_singleton_usage[label] += 1
+        if 'label' in node[1]:
+            for label in node[1]['label']:
+                if not is_node_marked(node[0], graph, cover_marker, label):
+                    vertex_singleton_usage[label] += 1
+                    mark_node(node[0], graph, cover_marker, label)
 
     return vertex_singleton_usage, edge_singleton_usage
 
@@ -369,6 +383,8 @@ class CodeTable:
         self._rows = []  # All rows of the code table
         self._description_length = 0.0  # the description length of this code table
         self._data_graph = graph  # The graph where we want to apply the code table elements
+        self._vertex_singleton_usage = dict()
+        self._edge_singleton_usage = dict()
 
     def add_row(self, row: CodeTableRow):
         """ Add a new row at the code table
@@ -401,6 +417,16 @@ class CodeTable:
         for row in self._rows:
             row_cover(row, self._data_graph, cover_marker)
 
+        res = singleton_cover(self._data_graph, cover_marker)
+        self._vertex_singleton_usage = res[0]
+        self._edge_singleton_usage = res[1]
+
+        # compute each row code length and description length
+        usage_sum = self._compute_usage_sum()
+        for row in self._rows:
+            row.compute_code_length(usage_sum)
+            row.compute_description_length(self._standard_table)
+
     def data_port(self):
         """ Provide all graph data port
         Returns
@@ -409,7 +435,40 @@ class CodeTable:
         """
         data_port = []
         for node in self._data_graph.nodes(data=True):
-            if 'port' in node:
+            if 'port' in node[1]:
                 data_port.append(node[0])
 
         return data_port
+
+    def _compute_usage_sum(self):
+        """ Compute the total of usage for this code table elements
+        Returns
+        -------
+        float : the usage sum"""
+        usage_sum = 0.0
+        for row in self._rows:
+            usage_sum += row.pattern_code()
+
+        if len(self._vertex_singleton_usage.keys()) != 0:
+            for value in self._vertex_singleton_usage.values():
+                usage_sum += value
+
+        if len(self._edge_singleton_usage.keys()) != 0:
+            for value in self._edge_singleton_usage.values():
+                usage_sum += value
+
+        return usage_sum
+
+    def _display_row(self, row: CodeTableRow):
+        msg = "{} |{} |{} |{} |{} |{}" \
+            .format(row.pattern(), row.pattern_code(), row.code_length(),
+                    len(row.pattern_port_code()), row.pattern_port_code(),
+                    row.port_code_length())
+        return msg
+
+    def __str__(self) -> str:
+        msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"
+        for row in self._rows:
+            msg += self._display_row(row) + "\n"
+
+        return msg

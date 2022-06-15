@@ -231,6 +231,20 @@ def test_row_cover():
             assert is_node_marked(node[0], gtest, 1, node[1]['label']) is False
 
 
+def test_singleton_cover():
+    test.add_node(1, label='x')
+    test.add_node(3, label='y')
+    test.add_node(2)
+    test.nodes()[2]['label'] = 'x', 'y'
+    test.add_edge(1, 2, label='e')
+    test.add_edge(2, 3, label='e')
+    res = singleton_cover(test, 1)
+
+    assert res[0]['x'] == 2
+    assert res[0]['y'] == 2
+    assert res[1]['e'] == 2
+
+
 standard_table = StandardTable(gtest)
 code_table = CodeTable(standard_table, gtest)
 
@@ -260,7 +274,7 @@ graph.add_edge(2, 1, label='a')
 graph.add_edge(4, 1, label='a')
 graph.add_edge(6, 1, label='a')
 graph.add_edge(6, 8, label='a')
-graph.add_edge(8, 6, label='a')
+# graph.add_edge(8, 6, label='a')
 graph.add_edge(1, 3, label='b')
 graph.add_edge(1, 5, label='b')
 graph.add_edge(1, 7, label='b')
@@ -275,13 +289,38 @@ graph.nodes[8]['label'] = 'w', 'x'
 
 
 def test_cover():
-    pattern_1 = nx.DiGraph()
-    pattern_1.add_node(range(1, 4))
-    pattern_1.add_edge(1, 2, label='a')
-    pattern_1.add_edge(2, 3, label='b')
-    pattern_1.nodes[1]['label'] = 'x'
-    pattern_1.nodes[2]['label'] = 'y'
-    pattern_1.nodes[3]['label'] = 'z'
+    p1 = nx.DiGraph()
+    p1.add_nodes_from(range(1, 4))
+    p1.add_edge(1, 2, label='a')
+    p1.add_edge(2, 3, label='b')
+    p1.nodes[1]['label'] = 'x'
+    p1.nodes[2]['label'] = 'y'
+    p1.nodes[3]['label'] = 'z'
+    row1 = CodeTableRow(p1)
 
-    pattern_2 = nx.DiGraph()
-    pattern_2.add_node(1, label='w')
+    p4 = nx.DiGraph()
+    p4.add_node(1, label='w')
+    row4 = CodeTableRow(p4)
+
+    p2 = nx.DiGraph()
+    p2.add_nodes_from(range(1, 3))
+    p2.add_edge(1, 2, label='a')
+    row2 = CodeTableRow(p2)
+
+    p3 = nx.DiGraph()
+    p3.add_node(1, label='x')
+    row3 = CodeTableRow(p3)
+
+    st = StandardTable(graph)
+    ct = CodeTable(st, graph)
+
+    ct.add_row(row3)
+    ct.add_row(row4)
+    ct.add_row(row2)
+    ct.add_row(row1)
+
+    ct.cover(1)
+
+    print(ct)
+    print(ct.data_port())
+

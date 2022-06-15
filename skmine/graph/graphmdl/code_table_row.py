@@ -1,4 +1,5 @@
 from skmine.graph.graphmdl import utils
+import math
 
 
 class CodeTableRow:
@@ -12,8 +13,24 @@ class CodeTableRow:
         self._pattern_port_code = pattern_port_code
         self._embeddings = []
         self._code_length = 0.0
-        self._port_code_length = dict()
+        self._port_code_length = None
         self._description_length = 0.0
+
+    def code_length(self):
+        """ Provide the row code length
+        Returns
+        -------
+        float
+        """
+        return self._code_length
+
+    def port_code_length(self):
+        """ Provide the row ports code length
+        Returns
+        -------
+        dict
+        """
+        return self._port_code_length
 
     def pattern(self):
         """ Provide the row pattern
@@ -77,6 +94,7 @@ class CodeTableRow:
         ---------
         rows_usage_sum : total of usage for the code table rows
         """
+        self._port_code_length = dict()
         if self._pattern_code == 0:
             self._code_length = 0.0
         else:
@@ -92,21 +110,25 @@ class CodeTableRow:
             self._port_code_length[p] = code
 
     def compute_description_length(self, standard_table):
+        """ Compute the row  description length
+        Parameters
+        ---------
+        standard_table
+        """
         if self._pattern_code is None:
             self._description_length = 0.0
 
-        if self._pattern_port_code is None or self._port_code_length.__len__() == 0:
+        if self._pattern_port_code is None or self._port_code_length is None== 0:
             raise ValueError("Row's codes should be compute")
 
-        self._description_length = self._code_length
+        code_port_total = 0.0
         for value in self._port_code_length.values():
-            self._description_length += value
+            code_port_total += value
 
-        if utils.is_edge_singleton(self._pattern):
-            # self._description_length += utils.encode(self._pattern, standard_table)
-            pass
-        elif utils.is_vertex_singleton(self._pattern):
-            # self._description_length += utils.encode_singleton(self._pattern, standard_table)
-            pass
-        else:
-            self._description_length += utils.encode(self._pattern, standard_table)
+        port_desc = math.log2(len(self._pattern.nodes()) + 1)
+        port_desc += math.log2(utils.binomial(len(self._pattern.nodes()), len(self._port_code_length)))
+        port_desc += code_port_total
+
+        self._description_length = self._code_length
+        self._description_length += utils.encode(self._pattern, standard_table)
+        self._description_length += port_desc
