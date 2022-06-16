@@ -167,17 +167,17 @@ def test_search_port():
 
     embed = utils.get_embeddings(ptest1, test1)
     mark_embedding(embed[0], test1, ptest1, 1)
-    assert (1 in search_port(test1, embed[0], 1, dict()).keys()) is True
+    assert (1 in search_port(test1, embed[0], 1, ptest1, dict()).keys()) is True
     mark_embedding(embed[1], test1, ptest1, 1)
-    port_usage = search_port(test1, embed[0], 1, dict())
-    assert search_port(test1, embed[1], 1, port_usage)[1] == 2
+    port_usage = search_port(test1, embed[0], 1, ptest1, dict())
+    assert search_port(test1, embed[1],  1, ptest1, port_usage)[1] == 2
 
 
 def test_is_node_edges_marked():
     mark_embedding(embeddings[0], gtest, pattern, 1)
 
-    assert is_node_edges_marked(gtest, 1, 1) is True
-    assert is_node_edges_marked(gtest, 2, 1) is False
+    assert is_node_edges_marked(gtest, 1, pattern, 1) is True
+    assert is_node_edges_marked(gtest, 2, pattern, 1) is False
 
 
 test = nx.Graph()
@@ -274,7 +274,7 @@ graph.add_edge(2, 1, label='a')
 graph.add_edge(4, 1, label='a')
 graph.add_edge(6, 1, label='a')
 graph.add_edge(6, 8, label='a')
-# graph.add_edge(8, 6, label='a')
+graph.add_edge(8, 6, label='a')
 graph.add_edge(1, 3, label='b')
 graph.add_edge(1, 5, label='b')
 graph.add_edge(1, 7, label='b')
@@ -298,29 +298,55 @@ def test_cover():
     p1.nodes[3]['label'] = 'z'
     row1 = CodeTableRow(p1)
 
-    p4 = nx.DiGraph()
-    p4.add_node(1, label='w')
-    row4 = CodeTableRow(p4)
-
     p2 = nx.DiGraph()
     p2.add_nodes_from(range(1, 3))
+    p2.nodes[1]['label'] = 'x'
+    p2.nodes[2]['label'] = 'x'
     p2.add_edge(1, 2, label='a')
+    p2.add_edge(2, 1, label='a')
     row2 = CodeTableRow(p2)
 
     p3 = nx.DiGraph()
     p3.add_node(1, label='x')
+    p3.add_node(2)
+    p3.add_edge(1, 2, label='a')
     row3 = CodeTableRow(p3)
 
+    p4 = nx.DiGraph()
+    p4.add_node(1, label='z')
+    p4.add_node(2)
+    p4.add_edge(2, 1, label='b')
+    row4 = CodeTableRow(p4)
+
+    p5 = nx.DiGraph()
+    p5.add_node(1, label='x')
+    p5.add_node(2, label='y')
+    p5.add_edge(1, 2, label='a')
+    row5 = CodeTableRow(p5)
+
+    p6 = nx.DiGraph()
+    p6.add_node(1, label='y')
+    p6.add_node(2, label='z')
+    p6.add_edge(1, 2, label='b')
+    row6 = CodeTableRow(p6)
+
+    p7 = nx.DiGraph()
+    p7.add_node(1, label='y')
+    p7.add_node(2)
+    p7.add_node(3)
+    p7.add_edge(1, 2, label='a')
+    p7.add_edge(1, 3, label='a')
+    row7 = CodeTableRow(p7)
+
+    #####################################################
     st = StandardTable(graph)
     ct = CodeTable(st, graph)
-
-    ct.add_row(row3)
+    ct.add_row(row7)
+    ct.add_row(row5)
     ct.add_row(row4)
-    ct.add_row(row2)
-    ct.add_row(row1)
-
+    # ct.add_row(row1)
     ct.cover(1)
 
     print(ct)
-    print(ct.data_port())
+
 

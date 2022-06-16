@@ -306,7 +306,7 @@ def get_embeddings(pattern, graph):
     else:
         graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
 
-    return list(graph_matcher.subgraph_isomorphisms_iter())
+    return list(graph_matcher.subgraph_monomorphisms_iter())
 
 
 def is_vertex_singleton(pattern):
@@ -377,7 +377,7 @@ def get_support(embeddings):
 
         return min(embed.values())
     else:
-        raise ValueError("embeddings shouldn't be empty")
+        return 0
 
 
 def get_label_index(label, values):
@@ -426,8 +426,12 @@ def get_edge_label(start, end, graph):
     ---------
     str
     """
-    if graph[start][end] is not None and 'label' in graph[start][end]:
-        return graph[start][end]['label']
+    if (start, end) in list(graph.edges(start)):
+        if 'label' in graph[start][end]:
+            return graph[start][end]['label']
+    elif (end, start) in list(graph.edges(end)):
+        if 'label' in graph[end][start]:
+            return graph[end][start]['label']
     else:
         raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
 
@@ -446,3 +450,52 @@ def is_without_edge(pattern):
         return True
     else:
         return False
+
+
+def display_graph(graph: Graph):
+    msg = ""
+    for edge in graph.edges(data=True):
+        if "label" in edge[2]:
+            msg += "{}--{}-->{}".format(edge[0], edge[2]['label'], edge[1]) + "\n"
+        else:
+            msg += "{}--->{}".format(edge[0], edge[1]) + "\n"
+
+    return msg
+
+
+def get_edge_in_embedding(embedding, pattern):
+    """ Provide the pattern edge who are in an embedding
+    Parameters
+    ----------
+    embedding
+    pattern
+    Returns
+    -------
+    set"""
+    keys = list(embedding.keys())
+    values = list(embedding.values())
+    edges = set()
+    i = 0
+    while i <= len(keys) - 1:
+        j = i
+        while j <= len(keys) - 1:
+            if (values[i], values[j]) in list(pattern.edges()):
+                edges.add((values[i], values[j]))
+            elif (values[j], values[i]) in list(pattern.edges()):
+                edges.add((values[j], values[i]))
+            j += 1
+        i += 1
+    return edges
+
+
+def get_key_from_value(data, value):
+    """ Provide a key in the dictionary from the value
+    Parameters
+    ----------
+    data
+    value
+    Returns
+    --------
+    int
+    """
+    return [k for k, v in data.items() if v == value][0]

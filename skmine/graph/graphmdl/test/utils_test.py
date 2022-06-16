@@ -270,3 +270,32 @@ def test_is_without_edge():
 
     test.add_edge(1, 2)
     assert utils.is_without_edge(test) is False
+
+
+def test_get_edge_in_embedding():
+    p7 = nx.DiGraph()
+    p7.add_node(1, label='x')
+    p7.add_node(2)
+    p7.add_node(3)
+    p7.add_edge(1, 2, label='a')
+    p7.add_edge(1, 3, label='a')
+
+    embeddings = utils.get_embeddings(p7, graph)
+    assert list(utils.get_edge_in_embedding(embeddings[0], p7))[0][0] == 1
+    assert list(utils.get_edge_in_embedding(embeddings[0], p7))[0][1] == 2
+    assert list(utils.get_edge_in_embedding(embeddings[0], p7))[1][0] == 1
+    assert list(utils.get_edge_in_embedding(embeddings[0], p7))[1][1] == 3
+
+
+def test_get_key_from_value():
+    p7 = nx.DiGraph()
+    p7.add_node(1, label='x')
+    p7.add_node(2)
+    p7.add_node(3)
+    p7.add_edge(1, 2, label='a')
+    p7.add_edge(1, 3, label='a')
+
+    embeddings = utils.get_embeddings(p7, graph)
+    assert utils.get_key_from_value(embeddings[0], 1) == 6
+    assert utils.get_key_from_value(embeddings[0], 2) == 8
+    assert utils.get_key_from_value(embeddings[0], 3) == 1
