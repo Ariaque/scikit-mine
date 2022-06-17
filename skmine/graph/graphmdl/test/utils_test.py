@@ -72,6 +72,12 @@ def test_encode():
     g1.add_edge(1, 2, label='a')
     g1.nodes[1]['label'] = 'x'
 
+    p5 = nx.DiGraph()
+    p5.add_node(1, label='x')
+    p5.add_node(2, label='y')
+    p5.add_edge(1, 2, label='a')
+    print(utils.encode(p5, standard_table))
+
     assert pytest.approx(utils.encode(g1, standard_table), rel=1e-01) == 21.44
     assert pytest.approx(utils.encode(graph, standard_table), rel=1e-01) == 111.76
 

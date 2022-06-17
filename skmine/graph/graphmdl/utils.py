@@ -481,7 +481,7 @@ def get_edge_in_embedding(embedding, pattern):
         while j <= len(keys) - 1:
             if (values[i], values[j]) in list(pattern.edges()):
                 edges.add((values[i], values[j]))
-            elif (values[j], values[i]) in list(pattern.edges()):
+            if (values[j], values[i]) in list(pattern.edges()):
                 edges.add((values[j], values[i]))
             j += 1
         i += 1
@@ -499,3 +499,87 @@ def get_key_from_value(data, value):
     int
     """
     return [k for k, v in data.items() if v == value][0]
+
+
+def get_candidates(rewritten_graph):
+    """ Search in the rewritten graph, the pattern who share a same port
+    Parameters
+    ----------
+    rewritten_graph
+    Returns
+    ----------
+    set
+    """
+    candidates = set()
+    for node in rewritten_graph.nodes(data=True):
+        if 'is_Pattern' in node[1] and node[1]['is_Pattern'] is True:
+            for e in rewritten_graph.edges(node[0]):
+                for e2 in rewritten_graph.edges(e[1]):
+                    candidates.add((node[0], e2[1]))
+
+    return candidates
+
+
+def count_port_node(rewritten_graph):
+    """ Count the port number in a rewritten graph
+    Parameters
+    ----------
+    rewritten_graph
+    Returns
+    --------
+    int
+    """
+    numb = 0
+    for node in rewritten_graph.nodes(data=True):
+        if 'is_Pattern' not in node[1]:
+            numb += 1
+    return numb
+
+
+def get_pattern_node_infos(rewritten_graph):
+    """ Provide pattern node information from the rewritten graph
+    Parameters
+    ----------
+    rewritten_graph
+    Returns
+    --------
+    dict
+    """
+    pattern_node = dict()
+    for node in rewritten_graph.nodes(data=True):
+        if 'is_Pattern' in node[1]:
+            for edge in rewritten_graph.edges(node[0], data=True):
+                if node[1]['label'] in pattern_node:
+                    pattern_node[node[1]['label']].append(edge[2]['label'])
+                else:
+                    pattern_node[node[1]['label']] = []
+                    pattern_node[node[1]['label']].append(edge[2]['label'])
+
+        if 'is_singleton' in node[1]:
+            if node[1]['is_singleton'] is True:
+                pattern_node[node[1]['label']].append('singleton')
+            else:
+                raise ValueError("is_singleton should be true or shouldn't exist")
+
+    return pattern_node
+
+
+def get_port_node_infos(rewritten_graph):
+    """ Provide port node information from the rewritten graph
+    Parameters
+    ----------
+    rewritten_graph
+    Returns
+    -------
+    dict
+    """
+    port_node = dict()
+    for node in rewritten_graph.nodes(data=True):
+        if 'is_Pattern' not in node[1]:
+            for edge in rewritten_graph.in_edges(node[0], data=True):
+                if node[0] in port_node:
+                    port_node[node[0]].append(rewritten_graph.nodes(data=True)[edge[0]]['label'] + edge[2]['label'])
+                else:
+                    port_node[node[0]] = []
+                    port_node[node[0]].append(rewritten_graph.nodes(data=True)[edge[0]]['label'] + edge[2]['label'])
+    return port_node

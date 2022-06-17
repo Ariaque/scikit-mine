@@ -106,8 +106,14 @@ class CodeTableRow:
             port_usage_sum = port_usage_sum + self._pattern_port_code[k]
 
         for p in self._pattern_port_code.keys():
-            code = utils.log2(self._pattern_port_code[p], port_usage_sum)
-            self._port_code_length[p] = code
+            if self._pattern_port_code[p] == 0:
+                self._port_code_length[p] = 0.0
+            else:
+                code = utils.log2(self._pattern_port_code[p], port_usage_sum)
+                if code == - 0.0:
+                    self._port_code_length[p] = 0.0
+                else:
+                    self._port_code_length[p] = code
 
     def compute_description_length(self, standard_table):
         """ Compute the row  description length
@@ -118,7 +124,7 @@ class CodeTableRow:
         if self._pattern_code is None:
             self._description_length = 0.0
 
-        if self._pattern_port_code is None or self._port_code_length is None== 0:
+        if self._pattern_port_code is None or self._port_code_length is None:
             raise ValueError("Row's codes should be compute")
 
         code_port_total = 0.0
@@ -129,6 +135,9 @@ class CodeTableRow:
         port_desc += math.log2(utils.binomial(len(self._pattern.nodes()), len(self._port_code_length)))
         port_desc += code_port_total
 
-        self._description_length = self._code_length
-        self._description_length += utils.encode(self._pattern, standard_table)
-        self._description_length += port_desc
+        self._description_length = self._code_length  # usage description
+        self._description_length += utils.encode(self._pattern, standard_table)  # structure description
+        self._description_length += port_desc  # ports description
+
+    def description_length(self):
+        return self._description_length
