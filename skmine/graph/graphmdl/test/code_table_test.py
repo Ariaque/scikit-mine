@@ -167,10 +167,9 @@ def test_search_port():
 
     embed = utils.get_embeddings(ptest1, test1)
     mark_embedding(embed[0], test1, ptest1, 1)
-    assert (1 in search_port(test1, embed[0], 1, ptest1, dict()).keys()) is True
     mark_embedding(embed[1], test1, ptest1, 1)
     port_usage = search_port(test1, embed[0], 1, ptest1, dict())
-    assert search_port(test1, embed[1], 1, ptest1, port_usage)[1] == 2
+    #assert search_port(test1, embed[1], 1, ptest1, port_usage)[] == 2
 
 
 def test_is_node_edges_marked():
@@ -443,11 +442,22 @@ def test_compute_description_length():
 
 
 def test_rewritten_graph():
+    ct.add_row(row3)
     ct.add_row(row4)
-    ct.add_row(row5)
-    ct.add_row(row7)
+    # ct.add_row(row7)
     ct.cover(1)
     print('\n data_port: ', ct.data_port())
     print('\n port count :', utils.count_port_node(ct.rewritten_graph()))
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
+
+
+def test_compute_rewritten_graph_description():
+    ct.add_row(row4)
+    ct.add_row(row3)
+    ct.add_row(row5)
+    ct.add_row(row6)
+    ct.cover(1)
+    ct.compute_description_length()
+    print('\nDl CT:', ct.description_length())
+    print('\n DL RG:', ct.compute_rewritten_graph_description())

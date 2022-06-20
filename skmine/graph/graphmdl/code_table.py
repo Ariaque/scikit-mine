@@ -383,8 +383,9 @@ def create_rewrite_edge(rewritten_graph, rewritten_node, data_node, **kwargs):
         port_node = utils.get_key_from_value(dict(rewritten_graph.nodes(data='label')), str(data_node))
         rewritten_graph.add_edge(rewritten_node, port_node, label=f"v{kwargs['pattern_port']}")
     else:
-        rewritten_graph.add_node(rewritten_node + 1, label=f"{data_node}")
-        rewritten_graph.add_edge(rewritten_node, rewritten_node + 1, label=f"v{kwargs['pattern_port']}")
+        last = len(rewritten_graph.nodes())
+        rewritten_graph.add_node(last + 1, label=f"{data_node}")
+        rewritten_graph.add_edge(rewritten_node, last + 1, label=f"v{kwargs['pattern_port']}")
 
 
 def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_number):
@@ -405,7 +406,8 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
                 mark_embedding(embedding, graph, row.pattern(), cover_marker)
                 ports = search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
                 cover_usage = cover_usage + 1
-                create_pattern_node(rewritten_graph, row_number, ports)  # with experimental rewritten graph implementation
+                create_pattern_node(rewritten_graph, row_number,
+                                    ports)  # with experimental rewritten graph implementation
 
     else:
         for embedding in row.embeddings():
@@ -419,7 +421,8 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
                     ports = search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
                     cover_usage = cover_usage + 1
                     mark_node(keys[i], graph, cover_marker, label)
-                    create_pattern_node(rewritten_graph, row_number, ports)  # with experimental rewritten graph implementation
+                    create_pattern_node(rewritten_graph, row_number,
+                                        ports)  # with experimental rewritten graph implementation
 
                 i = i + 1
 
@@ -446,6 +449,12 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
         if not is_edge_marked(edge[0], edge[1], graph, cover_marker, edge[2]['label']):
             edge_singleton_usage[edge[2]['label']] += 1
             mark_edge(edge[0], edge[1], graph, cover_marker, edge[2]['label'])
+
+            if 'port' not in graph.nodes[edge[0]]:
+                graph.nodes[edge[0]]['port'] = True
+            if 'port' not in graph.nodes[edge[1]]:
+                graph.nodes[edge[1]]['port'] = True
+
             create_edge_singleton_node(rewritten_graph, edge[2]['label'], edge[0],
                                        edge[1])  # with experimental rewritten graph implementation
     # for node label
@@ -455,7 +464,9 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
                 if not is_node_marked(node[0], graph, cover_marker, label):
                     vertex_singleton_usage[label] += 1
                     mark_node(node[0], graph, cover_marker, label)
-                    # search_port(graph,)
+                    if 'port' not in graph.nodes[node[0]]:  # if the node is not already marked as port
+                        graph.nodes[node[0]]['port'] = True
+
                     create_vertex_singleton_node(rewritten_graph, label,
                                                  node[0])  # with experimental rewritten graph implementation
 
@@ -514,6 +525,7 @@ class CodeTable:
         ----------
         cover_marker
         """
+        self._rewritten_graph = nx.DiGraph()  # reset the rewritten graph before each cover
         for row in self._rows:
             row_cover(row, self._data_graph, cover_marker, self._rewritten_graph,
                       self.rows().index(row))  # with experimental rewritten graph implementation
@@ -640,10 +652,93 @@ class CodeTable:
             raise ValueError("You should cover the code table before computing his description")
 
     def description_length(self):
+        """ Provide the code table description length
+        Returns
+        -------
+        float
+        """
         return self._description_length
 
     def rewritten_graph(self):
+        """ Provide the code table rewritten graph
+        Returns
+        -------
+        object
+        """
         return self._rewritten_graph
+
+    def compute_rewritten_graph_description(self):
+        """ Compute description_length of the rewritten graph
+        Returns
+        -------
+        float
+        """
+        if len(self._rewritten_graph.nodes()) != 0:
+            desc = 0.0
+            for node in self._rewritten_graph.nodes(data=True):
+                if 'is_Pattern' in node[1] and 'is_singleton' not in node[1]:
+                    row_number = int(node[1]['label'].split('P')[1])
+                    embed_port = utils.get_port_node(self._rewritten_graph, node[0])
+                    desc += self._compute_embedding_pattern_description(row_number, embed_port)
+                elif 'is_Pattern' in node[1] and 'is_singleton' in node[1]:
+                    desc += self._compute_embedding_singleton_description(node[1]['label'])
+                else:
+                    desc += 0.0
+
+            return desc
+        else:
+            raise ValueError("You should first cover the code table")
+
+    def _compute_embedding_pattern_description(self, row_number, embed_port):
+        """ Compute description length for pattern embedding in the rewritten graph
+        Parameters
+        ----------
+        row_number : The pattern row
+        embed_port: The embedding ports
+        Returns
+        ---------
+        float
+        """
+        if len(self._rows) - 1 >= row_number >= 0:
+            desc = 0.0
+            row = self._rows[row_number]
+            desc += row.code_length()
+            desc += math.log2(len(row.port_code_length()) + 1)
+
+            code_port_total = 0.0
+            for p in embed_port:
+                if p in row.port_code_length():
+                    code_port_total += row.port_code_length()[p]
+
+            desc += code_port_total
+            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), len(embed_port)))
+            return desc
+        else:
+            raise ValueError("The row number is out of the bounds")
+
+    def _compute_embedding_singleton_description(self, label):
+        """ Compute description_length for singleton embedding in the rewritten graph
+        Parameters
+        ----------
+        label : The singleton label
+        Returns
+        -------
+        float
+        """
+        desc = 0.0
+        if label in self._vertex_singleton_usage:
+            desc += self._singleton_code_length[label]
+            desc += math.log2(2)  # port_count = 2 and total_port_code = 0
+            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 1))
+            return desc
+        elif label in self._edge_singleton_usage:
+            desc += self._singleton_code_length[label]
+            desc += math.log2(3)  # port_count = 2
+            desc += 2  # total_port_code = 1.0 + 1.0
+            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 2))
+            return desc
+        else:
+            raise ValueError("The label should be a data graph label")
 
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"

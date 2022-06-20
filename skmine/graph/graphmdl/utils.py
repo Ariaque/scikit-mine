@@ -548,16 +548,20 @@ def get_pattern_node_infos(rewritten_graph):
     pattern_node = dict()
     for node in rewritten_graph.nodes(data=True):
         if 'is_Pattern' in node[1]:
+            res = []
             for edge in rewritten_graph.edges(node[0], data=True):
-                if node[1]['label'] in pattern_node:
-                    pattern_node[node[1]['label']].append(edge[2]['label'])
-                else:
-                    pattern_node[node[1]['label']] = []
-                    pattern_node[node[1]['label']].append(edge[2]['label'])
+                res.append(edge[2]['label'])
+
+        if node[1]['label'] in pattern_node:
+            pattern_node[node[1]['label']].append(res)
+        else:
+            pattern_node[node[1]['label']] = []
+            pattern_node[node[1]['label']].append(res)
 
         if 'is_singleton' in node[1]:
             if node[1]['is_singleton'] is True:
-                pattern_node[node[1]['label']].append('singleton')
+                if 'singleton' not in pattern_node[node[1]['label']]:
+                    pattern_node[node[1]['label']].append('singleton')
             else:
                 raise ValueError("is_singleton should be true or shouldn't exist")
 
@@ -583,3 +587,19 @@ def get_port_node_infos(rewritten_graph):
                     port_node[node[0]] = []
                     port_node[node[0]].append(rewritten_graph.nodes(data=True)[edge[0]]['label'] + edge[2]['label'])
     return port_node
+
+
+def get_port_node(rewritten_graph, node):
+    """ Provide an embedding vertex port
+    Parameters
+    ----------
+    rewritten_graph
+    node
+    Returns
+    --------
+    set
+    """
+    res = set()
+    for edge in rewritten_graph.out_edges(node, data=True):
+        res.add(int(edge[2]['label'].split('v')[1]))
+    return res
