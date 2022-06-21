@@ -426,8 +426,8 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
 
                 i = i + 1
 
-    row.set_pattern_port_code(port_usage)
-    row.set_pattern_code(cover_usage)
+    row.set_pattern_port_usage(port_usage)
+    row.set_pattern_usage(cover_usage)
 
 
 def singleton_cover(graph, cover_marker, rewritten_graph):
@@ -473,9 +473,28 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
     return vertex_singleton_usage, edge_singleton_usage
 
 
+def display_row(row: CodeTableRow):
+    """ Display the code table row as a string
+    Parameters
+    ----------
+    row
+    Returns
+    ---------
+    str
+    """
+    msg = "{} | {} |{} |{} |{} |{}" \
+        .format(utils.display_graph(row.pattern()), row.pattern_usage(), row.code_length(),
+                len(row.pattern_port_usage()), row.pattern_port_usage(),
+                row.port_code_length())
+    return msg
+
+
 class CodeTable:
     """
         Code table inspired by Krimp algorithm
+        It's composed by the non singleton pattern and their information (usage, ports) who represented by a row
+        And the singleton pattern stored in a dictionary if there is one
+        The separation between singleton and non-singleton pattern make easily their treatments and reduces the execution time.
     """
 
     def __init__(self, standard_table, graph):
@@ -483,10 +502,15 @@ class CodeTable:
         self._rows = []  # All rows of the code table
         self._description_length = 0.0  # the description length of this code table
         self._data_graph = graph  # The graph where we want to apply the code table elements
-        self._vertex_singleton_usage = dict()
-        self._edge_singleton_usage = dict()
-        self._singleton_code_length = dict()  # singleton pattern code length
-        self._rewritten_graph = nx.DiGraph()
+        """ We don't store singleton pattern ports because each singleton pattern node is its port,
+            then the vertex singleton ports are {1:1}, node 1 and usage 1,
+            and the edge singleton, {1:1, 2:1}, node 1, usage 1, node 2, usage 1.
+            Thus singleton ports are intuitive 
+        """
+        self._vertex_singleton_usage = dict()  # singleton vertex usage
+        self._edge_singleton_usage = dict()    # singleton edge usage
+        self._singleton_code_length = dict()   # singleton pattern code length
+        self._rewritten_graph = nx.DiGraph()   # A directed graph who represents the rewritten graph
 
     def add_row(self, row: CodeTableRow):
         """ Add a new row at the code table
@@ -519,21 +543,29 @@ class CodeTable:
         """
         return self._rows
 
-    def cover(self, cover_marker):
-        """ Make the cover for the code table
-        Parameters
-        ----------
-        cover_marker
+    def cover(self):
+        """ Make the cover for the code table,
+            the cover marker is get from the data graph
         """
+        # Get the cover marker and increment it
+        if 'cover_marker' in self._data_graph.graph:
+            self._data_graph.graph['cover_marker'] += 1
+        else:
+            self._data_graph.graph['cover_marker'] = 1
+
+        cover_marker = self._data_graph.graph['cover_marker']  # the current cover marker
+
         self._rewritten_graph = nx.DiGraph()  # reset the rewritten graph before each cover
+
         for row in self._rows:
             row_cover(row, self._data_graph, cover_marker, self._rewritten_graph,
                       self.rows().index(row))  # with experimental rewritten graph implementation
 
         res = singleton_cover(self._data_graph, cover_marker,
                               self._rewritten_graph)  # with experimental rewritten graph implementation
-        self._vertex_singleton_usage = res[0]
-        self._edge_singleton_usage = res[1]
+
+        self._vertex_singleton_usage = res[0]  # Store vertex singleton usage
+        self._edge_singleton_usage = res[1]  # Store edge singleton usage
 
         # compute each row code length and description length
         usage_sum = self._compute_usage_sum()
@@ -541,7 +573,7 @@ class CodeTable:
             row.compute_code_length(usage_sum)
             row.compute_description_length(self._standard_table)
 
-        self._compute_singleton_code(usage_sum)
+        self._compute_singleton_code(usage_sum)  # compute singleton code length
 
     def data_port(self):
         """ Provide all graph data port
@@ -560,10 +592,10 @@ class CodeTable:
         """ Compute the total of usage for this code table elements
         Returns
         -------
-        float : the usage sum"""
+        float : the usage sum """
         usage_sum = 0.0
         for row in self._rows:
-            usage_sum += row.pattern_code()
+            usage_sum += row.pattern_usage()
 
         if len(self._vertex_singleton_usage.keys()) != 0:
             for value in self._vertex_singleton_usage.values():
@@ -579,7 +611,7 @@ class CodeTable:
         """ Compute singleton pattern code length after cover
         Parameters
         ----------
-        usage_sum
+        usage_sum : Total of pattern ( even singleton) usage in the code table
         """
         if len(self._vertex_singleton_usage) != 0:
             for u, v in self._vertex_singleton_usage.items():
@@ -594,21 +626,6 @@ class CodeTable:
                     self._singleton_code_length[u] = 0.0
                 else:
                     self._singleton_code_length[u] = utils.log2(v, usage_sum)
-
-    def _display_row(self, row: CodeTableRow):
-        """ Display the code table row as a string
-        Parameters
-        ----------
-        row
-        Returns
-        ---------
-        str
-        """
-        msg = "{} | {} |{} |{} |{} |{}" \
-            .format(utils.display_graph(row.pattern()), row.pattern_code(), row.code_length(),
-                    len(row.pattern_port_code()), row.pattern_port_code(),
-                    row.port_code_length())
-        return msg
 
     def _compute_singleton_description_length(self):
         """ Compute the sum of each singleton pattern description length
@@ -637,11 +654,11 @@ class CodeTable:
         return desc
 
     def compute_description_length(self):
-        """ Compute this code table description length"""
-        if len(self._rewritten_graph.nodes()) != 0:
+        """ Compute this code table description length """
+        if len(self._rewritten_graph.nodes()) != 0:  # check if the code table is already covered
             description_length = 0.0
             for row in self._rows:
-                if row.pattern_code() != 0:
+                if row.pattern_usage() != 0:
                     row.compute_description_length(self._standard_table)
                     description_length += row.description_length()
 
@@ -743,7 +760,7 @@ class CodeTable:
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"
         for row in self._rows:
-            msg += self._display_row(row) + "\n"
+            msg += display_row(row) + "\n"
 
         for u, v in self._vertex_singleton_usage.items():
             msg += "{}|{}|{}".format(u, v, self._singleton_code_length[u]) + "\n"

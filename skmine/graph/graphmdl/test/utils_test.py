@@ -3,35 +3,42 @@ import pytest
 import skmine.graph.graphmdl.utils as utils
 from skmine.graph.graphmdl.standard_table import StandardTable as ST
 
-g = nx.DiGraph()
-g.add_nodes_from(range(1, 9))
-g.add_edge(2, 1, label='a')
-g.add_edge(4, 1, label='a')
-g.add_edge(6, 1, label='a')
-g.add_edge(6, 8, label='a')
-g.add_edge(8, 6, label='a')
-g.add_edge(1, 3, label='b')
-g.add_edge(1, 5, label='b')
-g.add_edge(1, 7, label='b')
-g.nodes[1]['label'] = 'y'
-g.nodes[2]['label'] = 'x'
-g.nodes[3]['label'] = 'z'
-g.nodes[4]['label'] = 'x'
-g.nodes[5]['label'] = 'z'
-g.nodes[6]['label'] = 'x'
-g.nodes[7]['label'] = 'z'
-g.nodes[8]['label'] = 'w', 'x'
-graph = g
-standard_table = ST(graph)
+
+def init_graph():
+    res = dict()
+    g = nx.DiGraph()
+    g.add_nodes_from(range(1, 9))
+    g.add_edge(2, 1, label='a')
+    g.add_edge(4, 1, label='a')
+    g.add_edge(6, 1, label='a')
+    g.add_edge(6, 8, label='a')
+    g.add_edge(8, 6, label='a')
+    g.add_edge(1, 3, label='b')
+    g.add_edge(1, 5, label='b')
+    g.add_edge(1, 7, label='b')
+    g.nodes[1]['label'] = 'y'
+    g.nodes[2]['label'] = 'x'
+    g.nodes[3]['label'] = 'z'
+    g.nodes[4]['label'] = 'x'
+    g.nodes[5]['label'] = 'z'
+    g.nodes[6]['label'] = 'x'
+    g.nodes[7]['label'] = 'z'
+    g.nodes[8]['label'] = 'w', 'x'
+    standard_table = ST(g)
+    res['graph'] = g
+    res['st'] = standard_table
+    return res
 
 
 def test_count_edge_label():
+    graph = init_graph()['graph']
     assert len(utils.count_edge_label(graph).items()) == 2
     assert utils.count_edge_label(graph)['a'] == 5
     assert utils.count_edge_label(graph)['b'] == 3
 
 
 def test_count_vertex_label():
+    graph = init_graph()['graph']
     assert len(utils.count_vertex_label(graph).items()) == 4
     assert utils.count_vertex_label(graph)['x'] == 4
     assert utils.count_vertex_label(graph)['y'] == 1
@@ -40,6 +47,7 @@ def test_count_vertex_label():
 
 
 def test_get_total_label():
+    graph = init_graph()['graph']
     assert utils.get_total_label(graph) == 17
 
 
@@ -67,6 +75,8 @@ def test_universal_integer_encoding_with0():
 
 
 def test_encode():
+    standard_table = init_graph()['st']
+    graph = init_graph()['graph']
     g1 = nx.DiGraph()
     g1.add_nodes_from(range(1, 3))
     g1.add_edge(1, 2, label='a')
@@ -76,13 +86,14 @@ def test_encode():
     p5.add_node(1, label='x')
     p5.add_node(2, label='y')
     p5.add_edge(1, 2, label='a')
-    print(utils.encode(p5, standard_table))
+    # print(utils.encode(p5, standard_table))
 
     assert pytest.approx(utils.encode(g1, standard_table), rel=1e-01) == 21.44
     assert pytest.approx(utils.encode(graph, standard_table), rel=1e-01) == 111.76
 
 
 def test_encode_vertex_singleton():
+    standard_table = init_graph()['st']
     with pytest.raises(ValueError):
         utils.encode_vertex_singleton(standard_table, '')
 
@@ -93,6 +104,7 @@ def test_encode_vertex_singleton():
 
 
 def test_encode_edge_singleton():
+    standard_table = init_graph()['st']
     with pytest.raises(ValueError):
         utils.encode_edge_singleton(standard_table, '')
 
@@ -101,6 +113,7 @@ def test_encode_edge_singleton():
 
 
 def test_encode_singleton():
+    standard_table = init_graph()['st']
     with pytest.raises(ValueError):
         utils.encode_singleton(standard_table, 0, 'a')
 
@@ -110,25 +123,32 @@ def test_encode_singleton():
     # Test for graph
 
 
-ng = nx.Graph()
-ng.add_nodes_from(range(1, 6))
-ng.add_edge(1, 2, label='e')
-ng.add_edge(2, 3, label='e')
-ng.add_edge(2, 4, label='e')
-ng.add_edge(5, 2, label='e')
-ng.nodes[1]['label'] = 'A'
-ng.nodes[2]['label'] = 'A'
-ng.nodes[3]['label'] = 'B'
-ng.nodes[4]['label'] = 'B'
-ng.nodes[5]['label'] = 'A'
+def init_ng():
+    res = dict()
 
-pattern = nx.Graph()
-pattern.add_nodes_from(range(1, 3))
-pattern.add_edge(1, 2, label='e')
-pattern.nodes[1]['label'] = 'A'
+    ng = nx.Graph()
+    ng.add_nodes_from(range(1, 6))
+    ng.add_edge(1, 2, label='e')
+    ng.add_edge(2, 3, label='e')
+    ng.add_edge(2, 4, label='e')
+    ng.add_edge(5, 2, label='e')
+    ng.nodes[1]['label'] = 'A'
+    ng.nodes[2]['label'] = 'A'
+    ng.nodes[3]['label'] = 'B'
+    ng.nodes[4]['label'] = 'B'
+    ng.nodes[5]['label'] = 'A'
+    res['ng'] = ng
+    pattern = nx.Graph()
+    pattern.add_nodes_from(range(1, 3))
+    pattern.add_edge(1, 2, label='e')
+    pattern.nodes[1]['label'] = 'A'
+    res['pattern'] = pattern
+    return res
 
 
 def test_get_embeddings():
+    ng = init_ng()['ng']
+    pattern = init_ng()['pattern']
     ng2 = nx.DiGraph()
     ng2.add_nodes_from(range(1, 6))
     ng2.add_edge(1, 2, label='e')
@@ -224,6 +244,9 @@ def test_is_edge_singleton():
 
 
 def test_get_support():
+    ng = init_ng()['ng']
+    pattern = init_ng()['pattern']
+    graph = init_graph()['graph']
     pattern1 = nx.DiGraph()
     pattern1.add_nodes_from(range(1, 4))
     pattern1.nodes[1]['label'] = 'x'
@@ -279,6 +302,7 @@ def test_is_without_edge():
 
 
 def test_get_edge_in_embedding():
+    graph = init_graph()['graph']
     p7 = nx.DiGraph()
     p7.add_node(1, label='x')
     p7.add_node(2)
@@ -294,6 +318,7 @@ def test_get_edge_in_embedding():
 
 
 def test_get_key_from_value():
+    graph = init_graph()['graph']
     p7 = nx.DiGraph()
     p7.add_node(1, label='x')
     p7.add_node(2)

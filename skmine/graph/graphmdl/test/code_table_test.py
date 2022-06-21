@@ -84,26 +84,34 @@ def test_mark_edge():
     assert is_edge_marked(1, 2, test, 2, 'e') is True
 
 
-gtest = nx.DiGraph()
-gtest.add_nodes_from(range(1, 6))
-gtest.add_edge(1, 2, label='e')
-gtest.add_edge(2, 3, label='e')
-gtest.add_edge(2, 4, label='e')
-gtest.add_edge(5, 2, label='e')
-gtest.nodes[1]['label'] = 'A'
-gtest.nodes[2]['label'] = 'A'
-gtest.nodes[3]['label'] = 'B'
-gtest.nodes[4]['label'] = 'B'
-gtest.nodes[5]['label'] = 'A'
+def init_gtest():
+    gtest = nx.DiGraph()
+    gtest.add_nodes_from(range(1, 6))
+    gtest.add_edge(1, 2, label='e')
+    gtest.add_edge(2, 3, label='e')
+    gtest.add_edge(2, 4, label='e')
+    gtest.add_edge(5, 2, label='e')
+    gtest.nodes[1]['label'] = 'A'
+    gtest.nodes[2]['label'] = 'A'
+    gtest.nodes[3]['label'] = 'B'
+    gtest.nodes[4]['label'] = 'B'
+    gtest.nodes[5]['label'] = 'A'
 
-pattern = nx.DiGraph()
-pattern.add_nodes_from(range(1, 3))
-pattern.add_edge(1, 2, label='e')
-pattern.nodes[1]['label'] = 'A'
-embeddings = utils.get_embeddings(pattern, gtest)
+    pattern = nx.DiGraph()
+    pattern.add_nodes_from(range(1, 3))
+    pattern.add_edge(1, 2, label='e')
+    pattern.nodes[1]['label'] = 'A'
+    embeddings = utils.get_embeddings(pattern, gtest)
+    standard_table = StandardTable(gtest)
+    code_table = CodeTable(standard_table, gtest)
+    rewritten_graph = nx.DiGraph()
+    return gtest, pattern, embeddings, standard_table, code_table, rewritten_graph
 
 
 def test_is_embedding_marked():
+    gtest = init_gtest()[0]
+    pattern = init_gtest()[1]
+    embeddings = init_gtest()[2]
     assert is_embedding_marked(embeddings[0], pattern, gtest, 1) is False
 
     gtest[1][2]['cover_mark'] = {'e': 1}
@@ -115,6 +123,9 @@ def test_is_embedding_marked():
 
 
 def test_mark_embedding():
+    gtest = init_gtest()[0]
+    pattern = init_gtest()[1]
+    embeddings = init_gtest()[2]
     mark_embedding(embeddings[0], gtest, pattern, 1)
 
     assert is_edge_marked(1, 2, gtest, 1, 'e') is True
@@ -168,21 +179,27 @@ def test_search_port():
     embed = utils.get_embeddings(ptest1, test1)
     mark_embedding(embed[0], test1, ptest1, 1)
     mark_embedding(embed[1], test1, ptest1, 1)
-    port_usage = search_port(test1, embed[0], 1, ptest1, dict())
-    #assert search_port(test1, embed[1], 1, ptest1, port_usage)[] == 2
+    port_usage = dict()
+    ports = search_port(test1, embed[0], 1, ptest1, port_usage)
+    assert ports[0][0] == 40
+    assert ports[0][1] == 1
+    assert (1 in port_usage.keys()) is True
+    search_port(test1, embed[1], 1, ptest1, port_usage)
+    assert port_usage[1] != 1
 
 
 def test_is_node_edges_marked():
+    gtest = init_gtest()[0]
+    pattern = init_gtest()[1]
+    embeddings = init_gtest()[2]
     mark_embedding(embeddings[0], gtest, pattern, 1)
 
     assert is_node_edges_marked(gtest, 1, pattern, 1) is True
     assert is_node_edges_marked(gtest, 2, pattern, 1) is False
 
 
-test = nx.Graph()
-
-
 def test_is_node_all_labels_marked():
+    test = nx.Graph()
     test.add_node(1, label='x')
     test.add_node(3, label='y')
     test.add_node(2)
@@ -198,9 +215,15 @@ def test_is_node_all_labels_marked():
 
 
 def test_row_cover():
+    gtest = init_gtest()[0]
+    pattern = init_gtest()[1]
+    embeddings = init_gtest()[2]
+    rewritten_graph = init_gtest()[5]
+
     ptest = nx.Graph()
     ptest.add_node(1, label='x')
 
+    test = nx.Graph()
     test.add_node(1, label='x')
     test.add_node(3, label='y')
     test.add_node(2)
@@ -211,14 +234,14 @@ def test_row_cover():
     row_test = CodeTableRow(ptest)
     row_test.set_embeddings(utils.get_embeddings(ptest, test))
     # with pytest.raises(ValueError):
-    row_cover(row_test, test, 1)
+    row_cover(row_test, test, 1, rewritten_graph, 0)
     assert is_node_marked(1, test, 1, ptest.nodes(data=True)[1]['label']) is True
     assert is_node_marked(2, test, 1, ptest.nodes(data=True)[1]['label']) is True
 
     row = CodeTableRow(pattern)
     row.set_embeddings(embeddings)
 
-    row_cover(row, gtest, 1)
+    row_cover(row, gtest, 1, rewritten_graph, 1)
 
     for edge in gtest.edges(data=True):
         assert is_edge_marked(edge[0], edge[1], gtest, 1, gtest[edge[0]][edge[1]]['label']) is True
@@ -231,28 +254,34 @@ def test_row_cover():
 
 
 def test_singleton_cover():
+    rewritten_graph = init_gtest()[5]
+
+    test = nx.Graph()
     test.add_node(1, label='x')
     test.add_node(3, label='y')
     test.add_node(2)
     test.nodes()[2]['label'] = 'x', 'y'
     test.add_edge(1, 2, label='e')
     test.add_edge(2, 3, label='e')
-    res = singleton_cover(test, 1)
+    res = singleton_cover(test, 1, rewritten_graph)
 
     assert res[0]['x'] == 2
     assert res[0]['y'] == 2
     assert res[1]['e'] == 2
 
 
-standard_table = StandardTable(gtest)
-code_table = CodeTable(standard_table, gtest)
-
-
 def test_rows():
+    code_table = init_gtest()[4]
     assert len(code_table.rows()) == 0
 
 
 def test_add_row():
+    gtest = init_gtest()[0]
+    pattern = init_gtest()[1]
+    embeddings = init_gtest()[2]
+    rewritten_graph = init_gtest()[5]
+    code_table = init_gtest()[4]
+
     row1 = CodeTableRow(pattern)
 
     pattern2 = nx.DiGraph()
@@ -267,10 +296,9 @@ def test_add_row():
     assert len(code_table.rows()[1].pattern().nodes()) == 1
 
 
-rewritten_graph = nx.DiGraph()
-
-
 def test_create_rewrite_edge():
+    rewritten_graph = init_gtest()[5]
+
     rewritten_graph.add_node(1, label='40')
     rewritten_graph.add_node(2, label='P1')
 
@@ -286,6 +314,7 @@ def test_create_rewrite_edge():
 
 
 def test_create_vertex_singleton_node():
+    rewritten_graph = init_gtest()[5]
     rewritten_graph.add_node(1, label='40')
     create_vertex_singleton_node(rewritten_graph, 'x', 40)
     assert (2 in rewritten_graph.nodes()) is True
@@ -298,6 +327,7 @@ def test_create_vertex_singleton_node():
 
 
 def test_create_edge_singleton_node():
+    rewritten_graph = init_gtest()[5]
     rewritten_graph.add_node(1, label='40')
     create_edge_singleton_node(rewritten_graph, 'a', 40, 41)
     assert rewritten_graph.nodes[2]['is_Pattern'] is True
@@ -309,155 +339,215 @@ def test_create_edge_singleton_node():
 
 
 def test_create_pattern_node():
+    rewritten_graph = init_gtest()[5]
     rewritten_graph.add_node(1, label='40')
-    create_pattern_node(rewritten_graph, 1, 40, 1)
+    create_pattern_node(rewritten_graph, 1, [(40, 1)])
     assert rewritten_graph.nodes[2]['is_Pattern'] is True
     assert ('is_singleton' in rewritten_graph.nodes(data=True)[2]) is False
     assert rewritten_graph.nodes[2]['label'] == 'P1'
     assert rewritten_graph[2][1]['label'] == 'v1'
 
 
-graph = nx.DiGraph()
-graph.add_nodes_from(range(1, 9))
-graph.add_edge(2, 1, label='a')
-graph.add_edge(4, 1, label='a')
-graph.add_edge(6, 1, label='a')
-graph.add_edge(6, 8, label='a')
-graph.add_edge(8, 6, label='a')
-graph.add_edge(1, 3, label='b')
-graph.add_edge(1, 5, label='b')
-graph.add_edge(1, 7, label='b')
-graph.nodes[1]['label'] = 'y'
-graph.nodes[2]['label'] = 'x'
-graph.nodes[3]['label'] = 'z'
-graph.nodes[4]['label'] = 'x'
-graph.nodes[5]['label'] = 'z'
-graph.nodes[6]['label'] = 'x'
-graph.nodes[7]['label'] = 'z'
-graph.nodes[8]['label'] = 'w', 'x'
+def init_graph():
+    res = dict()
+    graph = nx.DiGraph()
+    graph.add_nodes_from(range(1, 9))
+    graph.add_edge(2, 1, label='a')
+    graph.add_edge(4, 1, label='a')
+    graph.add_edge(6, 1, label='a')
+    graph.add_edge(6, 8, label='a')
+    graph.add_edge(8, 6, label='a')
+    graph.add_edge(1, 3, label='b')
+    graph.add_edge(1, 5, label='b')
+    graph.add_edge(1, 7, label='b')
+    graph.nodes[1]['label'] = 'y'
+    graph.nodes[2]['label'] = 'x'
+    graph.nodes[3]['label'] = 'z'
+    graph.nodes[4]['label'] = 'x'
+    graph.nodes[5]['label'] = 'z'
+    graph.nodes[6]['label'] = 'x'
+    graph.nodes[7]['label'] = 'z'
+    graph.nodes[8]['label'] = 'w', 'x'
 
-p1 = nx.DiGraph()
-p1.add_nodes_from(range(1, 4))
-p1.add_edge(1, 2, label='a')
-p1.add_edge(2, 3, label='b')
-p1.nodes[1]['label'] = 'x'
-p1.nodes[2]['label'] = 'y'
-p1.nodes[3]['label'] = 'z'
-row1 = CodeTableRow(p1)
+    res['graph'] = graph
 
-p2 = nx.DiGraph()
-p2.add_nodes_from(range(1, 3))
-p2.nodes[1]['label'] = 'x'
-p2.nodes[2]['label'] = 'x'
-p2.add_edge(1, 2, label='a')
-p2.add_edge(2, 1, label='a')
-row2 = CodeTableRow(p2)
+    p1 = nx.DiGraph()
+    p1.add_nodes_from(range(1, 4))
+    p1.add_edge(1, 2, label='a')
+    p1.add_edge(2, 3, label='b')
+    p1.nodes[1]['label'] = 'x'
+    p1.nodes[2]['label'] = 'y'
+    p1.nodes[3]['label'] = 'z'
+    row1 = CodeTableRow(p1)
+    res['p1'] = p1
+    res['row1'] = row1
 
-p3 = nx.DiGraph()
-p3.add_node(1, label='x')
-p3.add_node(2)
-p3.add_edge(1, 2, label='a')
-row3 = CodeTableRow(p3)
+    p2 = nx.DiGraph()
+    p2.add_nodes_from(range(1, 3))
+    p2.nodes[1]['label'] = 'x'
+    p2.nodes[2]['label'] = 'x'
+    p2.add_edge(1, 2, label='a')
+    p2.add_edge(2, 1, label='a')
+    row2 = CodeTableRow(p2)
 
-p4 = nx.DiGraph()
-p4.add_node(1, label='z')
-p4.add_node(2)
-p4.add_edge(2, 1, label='b')
-row4 = CodeTableRow(p4)
+    res['p2'] = p2
+    res['row2'] = row2
 
-p5 = nx.DiGraph()
-p5.add_node(1, label='x')
-p5.add_node(2, label='y')
-p5.add_edge(1, 2, label='a')
-row5 = CodeTableRow(p5)
+    p3 = nx.DiGraph()
+    p3.add_node(1, label='x')
+    p3.add_node(2)
+    p3.add_edge(1, 2, label='a')
+    row3 = CodeTableRow(p3)
+    res['p3'] = p3
+    res['row3'] = row3
 
-p6 = nx.DiGraph()
-p6.add_node(1, label='y')
-p6.add_node(2, label='z')
-p6.add_edge(1, 2, label='b')
-row6 = CodeTableRow(p6)
+    p4 = nx.DiGraph()
+    p4.add_node(1, label='z')
+    p4.add_node(2)
+    p4.add_edge(2, 1, label='b')
+    row4 = CodeTableRow(p4)
+    res['p4'] = p4
+    res['row4'] = row4
 
-p7 = nx.DiGraph()
-p7.add_node(1, label='y')
-p7.add_node(2)
-p7.add_node(3)
-p7.add_edge(1, 2, label='a')
-p7.add_edge(1, 3, label='a')
-row7 = CodeTableRow(p7)
-st = StandardTable(graph)
-ct = CodeTable(st, graph)
+    p5 = nx.DiGraph()
+    p5.add_node(1, label='x')
+    p5.add_node(2, label='y')
+    p5.add_edge(1, 2, label='a')
+    row5 = CodeTableRow(p5)
+    res['p5'] = p5
+    res['row5'] = row5
+
+    p6 = nx.DiGraph()
+    p6.add_node(1, label='y')
+    p6.add_node(2, label='z')
+    p6.add_edge(1, 2, label='b')
+    row6 = CodeTableRow(p6)
+    res['p6'] = p6
+    res['row6'] = row6
+
+    p7 = nx.DiGraph()
+    p7.add_node(1, label='y')
+    p7.add_node(2)
+    p7.add_node(3)
+    p7.add_edge(1, 2, label='a')
+    p7.add_edge(1, 3, label='a')
+    row7 = CodeTableRow(p7)
+    res['p7'] = p7
+    res['row7'] = row7
+    st = StandardTable(graph)
+    res['st'] = st
+    ct = CodeTable(st, graph)
+    res['ct'] = ct
+    return res
 
 
 def test_cover():
+    res = init_graph()
+    ct = res['ct']
     # ct.add_row(row7)
-    ct.add_row(row3)
-    ct.add_row(row4)
-    ct.add_row(row5)
-    ct.add_row(row6)
-    ct.cover(1)
+    ct.add_row(res['row3'])
+    ct.add_row(res['row4'])
+    ct.add_row(res['row5'])
+    ct.add_row(res['row6'])
+    ct.cover()
 
     print(ct)
 
 
 def test_compute_description_length():
+    res = init_graph()
+    ct = res['ct']
     with pytest.raises(ValueError):
         ct.compute_description_length()
 
-    ct.cover(1)
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 112.75
 
-    ct.add_row(row1)
-    ct.cover(2)
+    ct.add_row(res['row1'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 113.55
 
-    ct.add_row(row2)
-    ct.cover(3)
+    ct.add_row(res['row2'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 103.29
 
-    ct.remove_row(row1)
-    ct.remove_row(row2)
+    ct.remove_row(res['row1'])
+    ct.remove_row(res['row2'])
 
-    ct.add_row(row3)
-    ct.cover(4)
+    ct.add_row(res['row3'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 102.23
 
-    ct.add_row(row4)
-    ct.cover(5)
+    ct.add_row(res['row4'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 91.02
 
-    ct.add_row(row5)
-    ct.cover(6)
+    ct.add_row(res['row5'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 108.91
 
-    ct.add_row(row6)
-    ct.cover(7)
+    ct.add_row(res['row6'])
+    ct.cover()
     ct.compute_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 118.0
 
 
 def test_rewritten_graph():
-    ct.add_row(row3)
-    ct.add_row(row4)
+    res = init_graph()
+    ct = res['ct']
+    ct.add_row(res['row3'])
+    ct.add_row(res['row4'])
     # ct.add_row(row7)
-    ct.cover(1)
+    ct.cover()
     print('\n data_port: ', ct.data_port())
     print('\n port count :', utils.count_port_node(ct.rewritten_graph()))
+    assert utils.count_port_node(ct.rewritten_graph()) == 3
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
+    assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
 
 
 def test_compute_rewritten_graph_description():
-    ct.add_row(row4)
-    ct.add_row(row3)
-    ct.add_row(row5)
-    ct.add_row(row6)
-    ct.cover(1)
-    ct.compute_description_length()
-    print('\nDl CT:', ct.description_length())
-    print('\n DL RG:', ct.compute_rewritten_graph_description())
+    res = init_graph()
+    ct = res['ct']
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 143.51
+
+    ct.add_row(res['row1'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 56.49
+
+    ct.add_row(res['row2'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 38.05
+
+    ct.remove_row(res['row1'])
+    ct.remove_row(res['row2'])
+
+    ct.add_row(res['row3'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 108.15
+
+    ct.add_row(res['row4'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 72.84
+
+    ct.add_row(res['row5'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 68.61
+
+    ct.add_row(res['row6'])
+    ct.cover()
+    assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 68.61
+
+
+
+
+
+

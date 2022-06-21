@@ -5,15 +5,16 @@ import math
 class CodeTableRow:
     """
         Object to represent a row of the code table
+        Its concerns only non-singleton pattern
     """
 
-    def __init__(self, pattern, pattern_code=None, pattern_port_code=None):
+    def __init__(self, pattern, pattern_usage=None, pattern_port_usage=None):
         self._pattern = pattern
-        self._pattern_code = pattern_code
-        self._pattern_port_code = pattern_port_code
-        self._embeddings = []
+        self._pattern_usage = pattern_usage
+        self._pattern_port_usage = pattern_port_usage
+        self._embeddings = []   # the pattern embeddings in the data
         self._code_length = 0.0
-        self._port_code_length = None
+        self._port_code_length = None  # the pattern ports code
         self._description_length = 0.0
 
     def code_length(self):
@@ -40,37 +41,37 @@ class CodeTableRow:
         """
         return self._pattern
 
-    def pattern_code(self):
+    def pattern_usage(self):
         """ Provide the row pattern code
         Returns
         -------
         float
         """
-        return self._pattern_code
+        return self._pattern_usage
 
-    def set_pattern_code(self, pattern_code):
+    def set_pattern_usage(self, pattern_code):
         """ Set the row pattern code
         Parameters
         ----------
         pattern_code
         """
-        self._pattern_code = pattern_code
+        self._pattern_usage = pattern_code
 
-    def pattern_port_code(self):
+    def pattern_port_usage(self):
         """ Provide the port code of the row pattern
         Returns
         -------
         dict
         """
-        return self._pattern_port_code
+        return self._pattern_port_usage
 
-    def set_pattern_port_code(self, port_code):
+    def set_pattern_port_usage(self, port_code):
         """ set the port code of the row pattern
         Parameters
         ---------
         port_code
         """
-        self._pattern_port_code = port_code
+        self._pattern_port_usage = port_code
 
     def set_embeddings(self, embeddings):
         """ Set the pattern row embeddings
@@ -95,21 +96,21 @@ class CodeTableRow:
         rows_usage_sum : total of usage for the code table rows
         """
         self._port_code_length = dict()
-        if self._pattern_code == 0:
+        if self._pattern_usage == 0:
             self._code_length = 0.0
         else:
-            self._code_length = utils.log2(self._pattern_code, rows_usage_sum)
+            self._code_length = utils.log2(self._pattern_usage, rows_usage_sum)
 
         # compute port usage sum
         port_usage_sum = 0.0
-        for k in self._pattern_port_code.keys():
-            port_usage_sum = port_usage_sum + self._pattern_port_code[k]
+        for k in self._pattern_port_usage.keys():
+            port_usage_sum = port_usage_sum + self._pattern_port_usage[k]
 
-        for p in self._pattern_port_code.keys():
-            if self._pattern_port_code[p] == 0:
+        for p in self._pattern_port_usage.keys():
+            if self._pattern_port_usage[p] == 0:
                 self._port_code_length[p] = 0.0
             else:
-                code = utils.log2(self._pattern_port_code[p], port_usage_sum)
+                code = utils.log2(self._pattern_port_usage[p], port_usage_sum)
                 if code == - 0.0:
                     self._port_code_length[p] = 0.0
                 else:
@@ -121,10 +122,10 @@ class CodeTableRow:
         ---------
         standard_table
         """
-        if self._pattern_code is None:
+        if self._pattern_usage is None:
             self._description_length = 0.0
 
-        if self._pattern_port_code is None or self._port_code_length is None:
+        if self._pattern_port_usage is None or self._port_code_length is None:
             raise ValueError("Row's codes should be compute")
 
         code_port_total = 0.0
@@ -140,4 +141,9 @@ class CodeTableRow:
         self._description_length += port_desc  # ports description
 
     def description_length(self):
+        """ Provide the row description length
+        Returns
+        -------
+        float
+        """
         return self._description_length

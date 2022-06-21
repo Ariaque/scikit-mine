@@ -1,3 +1,3 @@
 """
-GraphMDl is an algorithm for pattern mining based on MDl principle
+GraphMDL is an algorithm for pattern mining based on MDL principle
 """

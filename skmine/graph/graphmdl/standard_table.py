@@ -5,6 +5,8 @@ import skmine.graph.graphmdl.utils as utils
 class StandardTable:
     """
       StandardTable : Initial code table for the GraphMDL algorithm
+      It's different of Krimp standard table
+      Here standard table is only a storage for label frequency in the initial data graph
     """
 
     # Authors : Arnauld Djedjemel
@@ -19,9 +21,9 @@ class StandardTable:
             """
         self._total_label = utils.get_total_label(graph)
         self._vertexST = dict([(u, utils.log2(v, self._total_label))
-                               for u, v in utils.count_vertex_label(graph).items()])
+                               for u, v in utils.count_vertex_label(graph).items()])  # Vertex label code length
         self._edgeST = dict([(u, utils.log2(v, self._total_label))
-                             for u, v in utils.count_edge_label(graph).items()])
+                             for u, v in utils.count_edge_label(graph).items()])    # edge label code length
 
     def display_vertex_st(self):
         """ Display vertexSt content

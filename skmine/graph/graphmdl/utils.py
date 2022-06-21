@@ -426,15 +426,17 @@ def get_edge_label(start, end, graph):
     ---------
     str
     """
-    if (start, end) in list(graph.edges(start)):
-        if 'label' in graph[start][end]:
-            return graph[start][end]['label']
-    elif (end, start) in list(graph.edges(end)):
-        if 'label' in graph[end][start]:
-            return graph[end][start]['label']
+    if start in graph.nodes() and end in graph.nodes():
+        if (start, end) in list(graph.edges(start)):
+            if 'label' in graph[start][end]:
+                return graph[start][end]['label']
+        elif (end, start) in list(graph.edges(end)):
+            if 'label' in graph[end][start]:
+                return graph[end][start]['label']
+        else:
+            raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
     else:
-        raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
-
+        raise ValueError(f"{start} and {end} should be a graph nodes")
 
 def is_without_edge(pattern):
     """ Check if the pattern is without edge

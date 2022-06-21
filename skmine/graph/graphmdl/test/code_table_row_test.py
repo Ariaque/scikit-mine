@@ -16,16 +16,16 @@ def test_pattern():
 
 
 def test_pattern_code():
-    assert row.pattern_code() is None
+    assert row.pattern_usage() is None
 
 
 def test_set_pattern_code():
-    row.set_pattern_code(3.0)
-    assert row.pattern_code() == 3.0
+    row.set_pattern_usage(3.0)
+    assert row.pattern_usage() == 3.0
 
 
 def test_pattern_port_code():
-    assert row.pattern_port_code() is None
+    assert row.pattern_port_usage() is None
 
 
 def test_embeddings():
