@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 import skmine.graph.graphmdl.utils as utils
-from skmine.graph.graphmdl.standard_table import StandardTable as ST
+from skmine.graph.graphmdl.label_codes import LabelCodes as LC
 
 
 def init_graph():
@@ -24,9 +24,9 @@ def init_graph():
     g.nodes[6]['label'] = 'x'
     g.nodes[7]['label'] = 'z'
     g.nodes[8]['label'] = 'w', 'x'
-    standard_table = ST(g)
+    label_codes = LC(g)
     res['graph'] = g
-    res['st'] = standard_table
+    res['st'] = label_codes
     return res
 
 

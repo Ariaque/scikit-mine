@@ -1,5 +1,5 @@
 import networkx as nx
-from ..standard_table import StandardTable
+from ..label_codes import LabelCodes
 import pytest
 
 
@@ -25,8 +25,8 @@ def init_graph():
     g.nodes[8]['label'] = 'w', 'x'
 
     graph = g
-    ST = StandardTable(graph)
-    res['st'] = ST
+    lc = LabelCodes(graph)
+    res['st'] = lc
     res['graph'] = graph
     return res
 
@@ -38,16 +38,16 @@ def test_total_label():
 
 def test_vertex_st():
     st = init_graph()['st']
-    assert pytest.approx(st.vertex_st()['y'], rel=1e-01) == 4.09
-    assert pytest.approx(st.vertex_st()['x'], rel=1e-01) == 2.09
-    assert pytest.approx(st.vertex_st()['z'], rel=1e-01) == 2.50
-    assert pytest.approx(st.vertex_st()['w'], rel=1e-01) == 4.09
+    assert pytest.approx(st.vertex_lc()['y'], rel=1e-01) == 4.09
+    assert pytest.approx(st.vertex_lc()['x'], rel=1e-01) == 2.09
+    assert pytest.approx(st.vertex_lc()['z'], rel=1e-01) == 2.50
+    assert pytest.approx(st.vertex_lc()['w'], rel=1e-01) == 4.09
 
 
 def test_edges_st():
     st = init_graph()['st']
-    assert pytest.approx(st.edges_st()['a'], rel=1e-01) == 1.77
-    assert pytest.approx(st.edges_st()['b'], rel=1e-01) == 2.50
+    assert pytest.approx(st.edges_lc()['a'], rel=1e-01) == 1.77
+    assert pytest.approx(st.edges_lc()['b'], rel=1e-01) == 2.50
 
 
 def test_encode():

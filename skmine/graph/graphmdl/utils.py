@@ -160,7 +160,7 @@ def encode(pattern: Graph, standard_table):
     vertex = count_vertex_label(pattern)  # count each pattern vertex label occurrences
 
     # Get total number of label in the standard table
-    total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+    total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
 
     vertex_number = len(pattern.nodes())
 
@@ -170,7 +170,7 @@ def encode(pattern: Graph, standard_table):
     # Compute description length for vertex
     vertex_description = dict()
     for u, v in vertex.items():
-        desc = standard_table.vertex_st()[u] + universal_integer_encoding_with0(v) + math.log2(
+        desc = standard_table.vertex_lc()[u] + universal_integer_encoding_with0(v) + math.log2(
             binomial(vertex_number, v))
         vertex_description[u] = desc
 
@@ -178,7 +178,7 @@ def encode(pattern: Graph, standard_table):
 
     edges_description = dict()
     for a, b in edges.items():
-        desc = standard_table.edges_st()[a] + universal_integer_encoding_with0(b) + math.log2(
+        desc = standard_table.edges_lc()[a] + universal_integer_encoding_with0(b) + math.log2(
             binomial(int(math.pow(vertex_number, 2)), b))
         edges_description[a] = desc
 
@@ -207,12 +207,12 @@ def encode_vertex_singleton(standard_table, vertex_label):
         raise ValueError(f"{vertex_label} shouldn't be empty ")
     else:
         # Get total number of label in the standard table
-        total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+        total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
         total_label_description = math.log2(total_label)  # description length for all labels
         vertex_number_description = universal_integer_encoding_with0(1)  # description length for all vertex
 
         # Compute description length for vertex
-        desc = standard_table.vertex_st()[vertex_label] + universal_integer_encoding_with0(1) + math.log2(
+        desc = standard_table.vertex_lc()[vertex_label] + universal_integer_encoding_with0(1) + math.log2(
             binomial(1, 1))
 
         return desc + total_label_description + vertex_number_description
@@ -234,12 +234,12 @@ def encode_edge_singleton(standard_table, edge_label):
         raise ValueError(f"{edge_label} shouldn't be empty")
     else:
         # Get total number of label in the standard table
-        total_label = len(standard_table.vertex_st()) + len(standard_table.edges_st())
+        total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
         total_label_description = math.log2(total_label)  # description length for all labels
         vertex_number_description = universal_integer_encoding_with0(2)  # description length for all vertex
 
         # Compute description length for vertex
-        desc = standard_table.edges_st()[edge_label] + universal_integer_encoding_with0(1) + math.log2(binomial(4, 1))
+        desc = standard_table.edges_lc()[edge_label] + universal_integer_encoding_with0(1) + math.log2(binomial(4, 1))
 
         return desc + total_label_description + vertex_number_description
 

@@ -2,7 +2,7 @@ import networkx as nx
 import pytest
 from ..code_table import *
 from ..code_table_row import CodeTableRow
-from ..standard_table import StandardTable
+from ..label_codes import LabelCodes
 
 
 def test_is_node_marked():
@@ -102,10 +102,10 @@ def init_gtest():
     pattern.add_edge(1, 2, label='e')
     pattern.nodes[1]['label'] = 'A'
     embeddings = utils.get_embeddings(pattern, gtest)
-    standard_table = StandardTable(gtest)
-    code_table = CodeTable(standard_table, gtest)
+    label_codes = LabelCodes(gtest)
+    code_table = CodeTable(label_codes, gtest)
     rewritten_graph = nx.DiGraph()
-    return gtest, pattern, embeddings, standard_table, code_table, rewritten_graph
+    return gtest, pattern, embeddings, label_codes, code_table, rewritten_graph
 
 
 def test_is_embedding_marked():
@@ -434,9 +434,9 @@ def init_graph():
     row7 = CodeTableRow(p7)
     res['p7'] = p7
     res['row7'] = row7
-    st = StandardTable(graph)
-    res['st'] = st
-    ct = CodeTable(st, graph)
+    lc = LabelCodes(graph)
+    res['lc'] = lc
+    ct = CodeTable(lc, graph)
     res['ct'] = ct
     return res
 
