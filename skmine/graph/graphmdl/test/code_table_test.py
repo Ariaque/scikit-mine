@@ -501,16 +501,23 @@ def test_compute_description_length():
 def test_rewritten_graph():
     res = init_graph()
     ct = res['ct']
-    ct.add_row(res['row3'])
-    ct.add_row(res['row4'])
-    # ct.add_row(row7)
+    ct.add_row(res['row5'])
+    p8 = nx.DiGraph()
+    p8.add_node(1)
+    p8.add_node(2, label='z')
+    p8.add_edge(1, 2, label='b')
+    row8 = CodeTableRow(p8)
+    ct.add_row(row8)
     ct.cover()
     print('\n data_port: ', ct.data_port())
     print('\n port count :', utils.count_port_node(ct.rewritten_graph()))
-    assert utils.count_port_node(ct.rewritten_graph()) == 3
+    # assert utils.count_port_node(ct.rewritten_graph()) == 6
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
-    assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
+    # assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
+    candidates = utils.generate_candidates(ct.rewritten_graph())
+    can = utils.get_candidates(candidates)
+    print(can)
 
 
 def test_compute_rewritten_graph_description():
@@ -545,7 +552,6 @@ def test_compute_rewritten_graph_description():
     ct.add_row(res['row6'])
     ct.cover()
     assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 68.61
-
 
 
 

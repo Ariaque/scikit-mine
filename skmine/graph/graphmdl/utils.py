@@ -4,6 +4,7 @@ from collections import Counter
 import networkx as nx
 from networkx import Graph
 from networkx.algorithms import isomorphism as iso
+from ..graphmdl.candidate import Candidate
 
 
 def log2(value, total):
@@ -438,6 +439,7 @@ def get_edge_label(start, end, graph):
     else:
         raise ValueError(f"{start} and {end} should be a graph nodes")
 
+
 def is_without_edge(pattern):
     """ Check if the pattern is without edge
     Parameters
@@ -503,23 +505,113 @@ def get_key_from_value(data, value):
     return [k for k, v in data.items() if v == value][0]
 
 
-def get_candidates(rewritten_graph):
+def generate_candidates(rewritten_graph):
     """ Search in the rewritten graph, the pattern who share a same port
     Parameters
     ----------
     rewritten_graph
     Returns
     ----------
-    set
+    list
     """
-    candidates = set()
+    candidates = list()
     for node in rewritten_graph.nodes(data=True):
-        if 'is_Pattern' in node[1] and node[1]['is_Pattern'] is True:
-            for e in rewritten_graph.edges(node[0]):
-                for e2 in rewritten_graph.edges(e[1]):
-                    candidates.add((node[0], e2[1]))
+        if 'is_Pattern' in node[1] and node[1]['is_Pattern'] is True:  # Check if the node is a pattern
+            for e in rewritten_graph.out_edges(node[0], data=True):  # iterate into the pattern out edges
+                i = 0
+                in_edges = list(rewritten_graph.in_edges(e[1], data=True))
+                while i <= len(in_edges) - 1:  # iterate into in_edges of the pattern neighbor who is a port
+                    if node[0] != in_edges[i][0]:
+                        e2 = in_edges[i]
+                        first_pattern = node[1]['label']
+                        first_pattern_port = e[2]['label']
+                        second_pattern = rewritten_graph.nodes[e2[0]]['label']
+                        second_pattern_port = e2[2]['label']
 
+                        # respect the candidate pattern order
+                        if 'is_singleton' not in node[1] and 'is_singleton' not in rewritten_graph.nodes[e2[0]]:
+
+                            if int(first_pattern.split('P')[1]) < int(second_pattern.split('P')[1]):
+                                c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                            else:
+                                c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+
+                        elif 'is_singleton' in node[1] and 'is_singleton' not in rewritten_graph.nodes[e2[0]]:
+
+                            c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+
+                        elif 'is_singleton' not in node[1] and 'is_singleton' in rewritten_graph.nodes[e2[1]]:
+                            c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                        else:
+                            if node[1]['label'] < rewritten_graph.nodes[e2[0]]['label']:
+                                c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                            else:
+                                c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+                        if is_candidate_port_exclusive(rewritten_graph, node[0], e2[0], e2[1]):
+                            c.exclusive_port_number += 1
+
+                        candidates.append(c)
+                    i += 1
     return candidates
+
+
+def compute_candidate_usage(candidates, candidate):
+    """ Compute a candidate embeddings number in the list of candidates
+    Parameters
+    -----------
+    candidates
+    candidate
+    """
+    usage = 0
+    for c in candidates:
+        if c == candidate:
+            usage += 1
+    candidate.set_usage(usage/2)
+
+
+def get_candidates(candidates):
+    """ Get the restricted list of candidates
+    Parameters
+    ----------
+    candidates
+    Returns
+    -------
+    list
+    """
+    res = []
+    for candidate in candidates:
+        if candidate not in res:
+            compute_candidate_usage(candidates, candidate)
+            res.append(candidate)
+        else:
+            get_candidate_from_data(res, candidate).exclusive_port_number += candidate.exclusive_port_number
+
+    return res
+
+
+def get_candidate_from_data(data, candidate):
+    for c in data:
+        if candidate == c:
+            return c
+
+
+def is_candidate_port_exclusive(rewritten_graph, first_pattern_node, second_pattern_node, port):
+    """ Check if a port are neighbors who are not the candidate nodes number
+     Parameters
+     -----------
+     rewritten_graph
+     first_pattern_node
+     second_pattern_node
+     port
+     Returns
+     ----------
+     bool
+     """
+    res = []
+    for edge in rewritten_graph.in_edges(port):
+        res.append(edge[0] == first_pattern_node or edge[0] == second_pattern_node)
+
+    return not (False in res)
 
 
 def count_port_node(rewritten_graph):
