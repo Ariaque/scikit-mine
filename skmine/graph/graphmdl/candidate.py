@@ -7,6 +7,7 @@ class Candidate:
         self.first_pattern = None
         self.second_pattern = None
         self.port = port
+        self.data_port = set()
         self.usage = 0
         self.exclusive_port_number = 0
 

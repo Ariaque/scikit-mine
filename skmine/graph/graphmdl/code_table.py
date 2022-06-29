@@ -757,6 +757,28 @@ class CodeTable:
         else:
             raise ValueError("The label should be a data graph label")
 
+    def is_ct_edge_singleton(self, label):
+        """ provide if a given label is an edge singleton label
+        Parameters
+        ----------
+        label
+        Returns
+        -------
+        bool
+        """
+        return label in self._edge_singleton_usage
+
+    def is_ct_vertex_singleton(self, label):
+        """ provide if a given label is a vertex singleton label
+        Parameters
+        ----------
+        label
+        Returns
+        -------
+        bool
+        """
+        return label in self._vertex_singleton_usage
+
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"
         for row in self._rows:

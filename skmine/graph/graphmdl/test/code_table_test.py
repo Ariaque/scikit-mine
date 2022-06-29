@@ -515,8 +515,8 @@ def test_rewritten_graph():
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
     # assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
-    candidates = utils.generate_candidates(ct.rewritten_graph())
-    can = utils.get_candidates(candidates)
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
+    can = utils.get_candidates(candidates, ct.rewritten_graph())
     print(can)
 
 
@@ -554,6 +554,31 @@ def test_compute_rewritten_graph_description():
     assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 68.61
 
 
+def test_is_ct_edge_singleton():
+    res = init_graph()
+    ct = res['ct']
+    ct.add_row(res['row5'])
+    p8 = nx.DiGraph()
+    p8.add_node(1)
+    p8.add_node(2, label='z')
+    p8.add_edge(1, 2, label='b')
+    row8 = CodeTableRow(p8)
+    ct.add_row(row8)
+    ct.cover()
+    assert ct.is_ct_edge_singleton('a') is True
+    assert ct.is_ct_edge_singleton('w') is False
 
 
-
+def test_is_ct_vertex_singleton():
+    res = init_graph()
+    ct = res['ct']
+    ct.add_row(res['row5'])
+    p8 = nx.DiGraph()
+    p8.add_node(1)
+    p8.add_node(2, label='z')
+    p8.add_edge(1, 2, label='b')
+    row8 = CodeTableRow(p8)
+    ct.add_row(row8)
+    ct.cover()
+    assert ct.is_ct_vertex_singleton('a') is False
+    assert ct.is_ct_vertex_singleton('w') is True

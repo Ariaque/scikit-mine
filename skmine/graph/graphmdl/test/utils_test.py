@@ -2,6 +2,9 @@ import networkx as nx
 import pytest
 import skmine.graph.graphmdl.utils as utils
 from skmine.graph.graphmdl.label_codes import LabelCodes as LC
+from skmine.graph.graphmdl.code_table import CodeTable
+from skmine.graph.graphmdl.code_table_row import CodeTableRow
+from skmine.graph.graphmdl.candidate import Candidate
 
 
 def init_graph():
@@ -330,3 +333,168 @@ def test_get_key_from_value():
     assert utils.get_key_from_value(embeddings[0], 1) == 6
     assert utils.get_key_from_value(embeddings[0], 2) == 8
     assert utils.get_key_from_value(embeddings[0], 3) == 1
+
+
+def init_graph2():
+    res = dict()
+    g = nx.DiGraph()
+    g.add_nodes_from(range(1, 9))
+    g.add_edge(2, 1, label='a')
+    g.add_edge(4, 1, label='a')
+    g.add_edge(6, 1, label='a')
+    g.add_edge(6, 8, label='a')
+    g.add_edge(1, 3, label='b')
+    g.add_edge(1, 5, label='b')
+    g.add_edge(1, 7, label='b')
+    g.nodes[1]['label'] = 'y'
+    g.nodes[2]['label'] = 'x'
+    g.nodes[3]['label'] = 'z'
+    g.nodes[4]['label'] = 'x'
+    g.nodes[5]['label'] = 'z'
+    g.nodes[6]['label'] = 'x'
+    g.nodes[7]['label'] = 'z'
+    g.nodes[8]['label'] = 'w', 'x'
+    res['g'] = g
+    label_codes = LC(g)
+    res['label_codes'] = label_codes
+    p1 = nx.DiGraph()
+    p1.add_node(1, label='x')
+    p1.add_node(2)
+    p1.add_edge(1, 2, label='a')
+    res['p1'] = p1
+    p2 = nx.DiGraph()
+    p2.add_node(1, label='y')
+    p2.add_node(2)
+    p2.add_edge(1, 2, label='b')
+    res['p2'] = p2
+    ct = CodeTable(label_codes, g)
+    ct.add_row(CodeTableRow(res['p1']))
+    ct.add_row(CodeTableRow(res['p2']))
+    ct.cover()
+    res['ct'] = ct
+    return res
+
+
+def test_generate_candidates():
+    res = init_graph2()
+    ct = res['ct']
+
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
+
+    assert len(candidates) == 44
+    assert candidates[0].first_pattern is not None
+    assert candidates[0].second_pattern is not None
+    assert len(candidates[0].data_port) != 0
+    print(candidates)
+    assert candidates[12].second_pattern is None
+
+
+def test_compute_pattern_usage():
+    res = init_graph2()
+    ct = res['ct']
+    """ {2: ['P0v2', 'P0v2', 'P0v2', 'P1v1', 'P1v1', 'P1v1'], 
+    5: ['P0v1', 'P0v1'], 6: ['P0v2', 'wv1', 'xv1'], 
+    9: ['P1v2', 'zv1'], 11: ['P1v2', 'zv1'], 
+    13: ['P1v2', 'zv1']} """
+    usage = utils.compute_pattern_usage(ct.rewritten_graph(), 'P0v2', {2})
+    assert usage == 3
+    usage = utils.compute_pattern_usage(ct.rewritten_graph(), 'zv1', {11, 9, 13})
+    assert usage == 3
+    # print(usage)
+
+
+def test_compute_candidate_usage():
+    res = init_graph2()
+    ct = res['ct']
+
+    c1 = Candidate('P0', 'P0', ('v2', 'v2'))
+    c1.first_pattern = res['p1']
+    c1.second_pattern = res['p1']
+    c1.data_port = {2}
+    utils.compute_candidate_usage(ct.rewritten_graph(), c1, ct)
+    assert c1.usage == 1
+
+    c2 = Candidate('P0', 'P1', ('v2', 'v1'))
+    c2.first_pattern = res['p1']
+    c2.second_pattern = res['p2']
+    c2.data_port = {2}
+    utils.compute_candidate_usage(ct.rewritten_graph(), c2, ct)
+    assert c2.usage == 3
+
+    c3 = Candidate('z', 'P1', ('v1', 'v2'))
+    c3.second_pattern = res['p2']
+    with pytest.raises(ValueError):
+        utils.compute_candidate_usage(ct.rewritten_graph(), c3, ct)
+
+    c4 = Candidate('w', 'x', ('v1', 'v1'))
+    c4.data_port = {6}
+    utils.compute_candidate_usage(ct.rewritten_graph(), c4, ct)
+    assert c4.usage == 1
+
+    c5 = Candidate('P1', 'z', ('v2', 'v1'))
+    c5.first_pattern = res['p2']
+    c5.data_port = {11, 9, 13}
+    utils.compute_candidate_usage(ct.rewritten_graph(), c5, ct)
+    assert c5.usage == 3
+
+
+def test_compute_pattern_embeddings():
+    res = init_graph2()
+    ct = res['ct']
+
+    assert utils.compute_pattern_embeddings(ct.rewritten_graph(), 'P1') == 3
+    assert utils.compute_pattern_embeddings(ct.rewritten_graph(), 'w') == 1
+
+
+def test_is_candidate_port_exclusive():
+    res = init_graph2()
+    ct = res['ct']
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
+    c = Candidate('P0', 'P0', ('v1', 'v1'))
+    c1 = Candidate('P0', 'P0', ('v2', 'v2'))
+    assert utils.is_candidate_port_exclusive(candidates, c, 5) is True
+    assert utils.is_candidate_port_exclusive(candidates, c1, 2) is False
+
+
+def test_get_candidates():
+    res = init_graph2()
+    ct = res['ct']
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
+    restricted_candidates = utils.get_candidates(candidates, ct.rewritten_graph(), ct)
+    assert len(restricted_candidates) == 8
+    assert restricted_candidates[1].usage == 3
+    assert restricted_candidates[1].exclusive_port_number == 0
+    assert restricted_candidates[6].exclusive_port_number == 3
+
+
+def test_merge_candidate():
+    pa = nx.DiGraph()
+    pa.add_node(1, label='A')
+    pa.add_node(2, label='B')
+    pa.add_node(3, label='C')
+    pa.add_edge(1, 2, label='a')
+    pa.add_edge(2, 3, label='b')
+
+    pb = nx.DiGraph()
+    pb.add_node(1, label='D')
+    pb.add_node(2, label='E')
+    pb.add_node(3, label='F')
+    pb.add_edge(1, 2, label='c')
+    pb.add_edge(2, 3, label='d')
+
+    c = Candidate('P0', 'P1', ('v2', 'v1'))
+    c.first_pattern = pa
+    c.second_pattern = pb
+
+    graph = utils.merge_candidate(c)
+
+    assert len(graph.nodes()) == 5
+    assert len(graph.nodes[2]['label']) == 2
+    assert graph[2][4]['label'] == 'c'
+
+    c1 = Candidate('P0', 'P1', ('v3', 'v2'))
+    c1.first_pattern = pa
+    c1.second_pattern = pb
+    g1 = utils.merge_candidate(c1)
+    assert len(g1.nodes[3]['label']) == 2
+    # assert len(g1.edges(3)) == 2
