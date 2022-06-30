@@ -508,6 +508,56 @@ def get_key_from_value(data, value):
     return [k for k, v in data.items() if v == value][0]
 
 
+def get_two_nodes_all_port(node1, node2, rewritten_graph):
+    """ Provide all port in a graph for a potentially candidate nodes
+     Parameters
+     ----------
+     node1
+     node2
+     rewritten_graph
+
+     Returns
+     -------
+     list
+     """
+    res = set()
+    for node in rewritten_graph.nodes(data=True):
+        if 'is_Pattern' not in node[1]:
+            edge1 = (node1, node[0])
+            edge2 = (node2, node[0])
+            cpt = 0
+            for edge in rewritten_graph.in_edges(node[0]):
+                if edge == edge1 or edge == edge2:
+                    cpt += 1
+            if cpt == 2:
+                res.add(node[0])
+    return list(res)
+
+
+def get_all_candidate_ports_labels_tuple(rewritten_graph, ports, first_node, second_node, inverse=False):
+    """ Provide a list with port label tuple for a given two nodes who are a candidate
+    Parameters
+    ---------
+    rewritten_graph
+    ports : a complete list of data port
+    first_node
+    second_node
+    inverse : boolean to decide for the tuple elements positions
+
+    Returns
+    -------
+    list"""
+    port = []
+    for p in ports:
+        first_port = get_edge_label(first_node, p, rewritten_graph)
+        second_port = get_edge_label(second_node, p, rewritten_graph)
+        if not inverse:
+            port.append((first_port, second_port))
+        else:
+            port.append((second_port, first_port))
+    return port
+
+
 def generate_candidates(rewritten_graph, code_table):
     """ Search in the rewritten graph, the pattern who share a same port
     Parameters
@@ -528,40 +578,54 @@ def generate_candidates(rewritten_graph, code_table):
                     if node[0] != in_edges[i][0]:
                         e2 = in_edges[i]
                         first_pattern = node[1]['label']
-                        first_pattern_port = e[2]['label']
+                        # first_pattern_port = e[2]['label']
                         second_pattern = rewritten_graph.nodes[e2[0]]['label']
-                        second_pattern_port = e2[2]['label']
-                        port_number = e[1]
+                        # second_pattern_port = e2[2]['label']
+                        # port_number = e[1]
+                        all_candidate_port = get_two_nodes_all_port(node[0], e2[0], rewritten_graph)
+
                         # respect the candidate pattern order
 
                         # If both candidate element are the pattern
                         if 'is_singleton' not in node[1] and 'is_singleton' not in rewritten_graph.nodes[e2[0]]:
 
                             if int(first_pattern.split('P')[1]) < int(second_pattern.split('P')[1]):
-                                c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port, node[0], e2[0])
+                                c = Candidate(first_pattern, second_pattern, ports)
                             else:
-                                c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port,
+                                                                             node[0], e2[0], True)
+                                c = Candidate(second_pattern, first_pattern, ports)
 
                             c.first_pattern = code_table.rows()[int(c.first_pattern_label.split('P')[1])].pattern()
                             c.second_pattern = code_table.rows()[int(c.second_pattern_label.split('P')[1])].pattern()
 
                         # if one node is a pattern and the second a singleton
                         elif 'is_singleton' in node[1] and 'is_singleton' not in rewritten_graph.nodes[e2[0]]:
-
-                            c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+                            ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port, node[0],
+                                                                         e2[0], True)
+                            c = Candidate(second_pattern, first_pattern, ports)
                             c.first_pattern = code_table.rows()[int(c.first_pattern_label.split('P')[1])].pattern()
 
                         elif 'is_singleton' not in node[1] and 'is_singleton' in rewritten_graph.nodes[e2[0]]:
-                            c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                            ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port, node[0],
+                                                                         e2[0])
+                            c = Candidate(first_pattern, second_pattern, ports)
                             c.first_pattern = code_table.rows()[int(c.first_pattern_label.split('P')[1])].pattern()
 
                         else:  # if both of the candidate elements are the singleton
                             if node[1]['label'] < rewritten_graph.nodes[e2[0]]['label']:
-                                c = Candidate(first_pattern, second_pattern, (first_pattern_port, second_pattern_port))
+                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port,
+                                                                             node[0], e2[0])
+                                c = Candidate(first_pattern, second_pattern, ports)
                             else:
-                                c = Candidate(second_pattern, first_pattern, (second_pattern_port, first_pattern_port))
+                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port,
+                                                                             node[0], e2[0], True)
+                                c = Candidate(second_pattern, first_pattern, ports)
 
-                        c.data_port.add(port_number)
+                        for p in all_candidate_port:
+                            c.data_port.add(p)
+
                         candidates.append(c)
                     i += 1
     return candidates
@@ -597,9 +661,9 @@ def compute_candidate_usage(rewritten_graph, candidate, code_table):
     code_table
     """
 
-    first_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.first_pattern_label + candidate.port[0],
+    first_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.first_pattern_label + candidate.port[0][0],
                                                 list(candidate.data_port))
-    second_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.second_pattern_label + candidate.port[1],
+    second_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.second_pattern_label + candidate.port[0][1],
                                                  list(candidate.data_port))
 
     if candidate.first_pattern_label == candidate.second_pattern_label:
@@ -798,7 +862,15 @@ def create_candidate_second_pattern(pattern, graph, port):
 
 
 def create_singleton_pattern(label, code_table):
-    """ Create a graph who represent a singleton """
+    """ Create a graph who represent a singleton
+    Parameters
+    ----------
+    label
+    code_table
+    Returns
+    -------
+    Graph
+    """
     pattern = nx.DiGraph()
     if code_table.is_ct_edge_singleton(label):
         pattern.add_nodes_from(range(1, 3))
@@ -811,12 +883,21 @@ def create_singleton_pattern(label, code_table):
 
 
 def merge_candidate(candidate):
+    """ Merge a candidate pattern
+    Parameters
+    -----------
+    candidate
+    Returns
+    --------
+    Graph
+    """
     graph = nx.DiGraph()
-    port = (int(candidate.port[0].split('v')[1]), int(candidate.port[1].split('v')[1]))
-    # Create first pattern node and edges
-    create_candidate_first_pattern(candidate.first_pattern, graph)
-    # Create second pattern node and edges
-    create_candidate_second_pattern(candidate.second_pattern, graph, port)
+    for p in candidate.port:
+        port = (int(p[0].split('v')[1]), int(p[1].split('v')[1]))
+        # Create first pattern node and edges
+        create_candidate_first_pattern(candidate.first_pattern, graph)
+        # Create second pattern node and edges
+        create_candidate_second_pattern(candidate.second_pattern, graph, port)
 
     return graph
 

@@ -375,6 +375,25 @@ def init_graph2():
     return res
 
 
+def test_get_two_nodes_all_port():
+    test = nx.DiGraph()
+    test.add_node(1, is_Pattern=True)
+    test.add_node(2, is_Pattern=True)
+    test.add_node(3)
+    test.add_node(4)
+    test.add_node(5, is_Pattern=True)
+    test.add_edge(1, 3)
+    test.add_edge(1, 4)
+    test.add_edge(2, 3)
+    test.add_edge(2, 4)
+    test.add_edge(5, 4)
+
+    assert len(utils.get_two_nodes_all_port(1, 2, test)) == 2
+    print('\n', utils.get_two_nodes_all_port(1, 2, test))
+    assert len(utils.get_two_nodes_all_port(5, 2, test)) == 1
+    print('\n', utils.get_two_nodes_all_port(5, 2, test))
+
+
 def test_generate_candidates():
     res = init_graph2()
     ct = res['ct']
@@ -407,31 +426,31 @@ def test_compute_candidate_usage():
     res = init_graph2()
     ct = res['ct']
 
-    c1 = Candidate('P0', 'P0', ('v2', 'v2'))
+    c1 = Candidate('P0', 'P0', [('v2', 'v2')])
     c1.first_pattern = res['p1']
     c1.second_pattern = res['p1']
     c1.data_port = {2}
     utils.compute_candidate_usage(ct.rewritten_graph(), c1, ct)
     assert c1.usage == 1
 
-    c2 = Candidate('P0', 'P1', ('v2', 'v1'))
+    c2 = Candidate('P0', 'P1', [('v2', 'v1')])
     c2.first_pattern = res['p1']
     c2.second_pattern = res['p2']
     c2.data_port = {2}
     utils.compute_candidate_usage(ct.rewritten_graph(), c2, ct)
     assert c2.usage == 3
 
-    c3 = Candidate('z', 'P1', ('v1', 'v2'))
+    c3 = Candidate('z', 'P1', [('v1', 'v2')])
     c3.second_pattern = res['p2']
     with pytest.raises(ValueError):
         utils.compute_candidate_usage(ct.rewritten_graph(), c3, ct)
 
-    c4 = Candidate('w', 'x', ('v1', 'v1'))
+    c4 = Candidate('w', 'x', [('v1', 'v1')])
     c4.data_port = {6}
     utils.compute_candidate_usage(ct.rewritten_graph(), c4, ct)
     assert c4.usage == 1
 
-    c5 = Candidate('P1', 'z', ('v2', 'v1'))
+    c5 = Candidate('P1', 'z', [('v2', 'v1')])
     c5.first_pattern = res['p2']
     c5.data_port = {11, 9, 13}
     utils.compute_candidate_usage(ct.rewritten_graph(), c5, ct)
@@ -450,8 +469,8 @@ def test_is_candidate_port_exclusive():
     res = init_graph2()
     ct = res['ct']
     candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
-    c = Candidate('P0', 'P0', ('v1', 'v1'))
-    c1 = Candidate('P0', 'P0', ('v2', 'v2'))
+    c = Candidate('P0', 'P0', [('v1', 'v1')])
+    c1 = Candidate('P0', 'P0', [('v2', 'v2')])
     assert utils.is_candidate_port_exclusive(candidates, c, 5) is True
     assert utils.is_candidate_port_exclusive(candidates, c1, 2) is False
 
@@ -482,7 +501,7 @@ def test_merge_candidate():
     pb.add_edge(1, 2, label='c')
     pb.add_edge(2, 3, label='d')
 
-    c = Candidate('P0', 'P1', ('v2', 'v1'))
+    c = Candidate('P0', 'P1', [('v2', 'v1')])
     c.first_pattern = pa
     c.second_pattern = pb
 
@@ -492,7 +511,7 @@ def test_merge_candidate():
     assert len(graph.nodes[2]['label']) == 2
     assert graph[2][4]['label'] == 'c'
 
-    c1 = Candidate('P0', 'P0', ('v3', 'v2'))
+    c1 = Candidate('P0', 'P0', [('v3', 'v2')])
     c1.first_pattern = pa
     c1.second_pattern = pa
     g1 = utils.merge_candidate(c1)
@@ -500,7 +519,7 @@ def test_merge_candidate():
     assert g1[4][3] is not None
     assert g1[3][5] is not None
 
-    c2 = Candidate('P0', 'P1', ('v1', 'v1'))
+    c2 = Candidate('P0', 'P1', [('v1', 'v1')])
     c2.first_pattern = pa
     c2.second_pattern = pb
     g2 = utils.merge_candidate(c2)
