@@ -492,9 +492,17 @@ def test_merge_candidate():
     assert len(graph.nodes[2]['label']) == 2
     assert graph[2][4]['label'] == 'c'
 
-    c1 = Candidate('P0', 'P1', ('v3', 'v2'))
+    c1 = Candidate('P0', 'P0', ('v3', 'v2'))
     c1.first_pattern = pa
-    c1.second_pattern = pb
+    c1.second_pattern = pa
     g1 = utils.merge_candidate(c1)
     assert len(g1.nodes[3]['label']) == 2
-    # assert len(g1.edges(3)) == 2
+    assert g1[4][3] is not None
+    assert g1[3][5] is not None
+
+    c2 = Candidate('P0', 'P1', ('v1', 'v1'))
+    c2.first_pattern = pa
+    c2.second_pattern = pb
+    g2 = utils.merge_candidate(c2)
+    assert len(g2.nodes[1]['label']) == 2
+    assert g2[1][4]['label'] == 'c'

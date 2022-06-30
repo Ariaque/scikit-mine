@@ -745,9 +745,6 @@ def get_candidates(candidates, rewritten_graph, code_table):
     return res
 
 
-""" Not tested begin """
-
-
 def create_candidate_first_pattern(pattern, graph):
     """ Create a given candidate first pattern nodes and edges
     Parameters
@@ -822,9 +819,6 @@ def merge_candidate(candidate):
     create_candidate_second_pattern(candidate.second_pattern, graph, port)
 
     return graph
-
-
-""" Not tested end"""
 
 
 def count_port_node(rewritten_graph):
