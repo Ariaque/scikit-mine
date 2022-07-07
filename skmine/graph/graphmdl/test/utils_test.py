@@ -415,45 +415,59 @@ def test_compute_pattern_usage():
     5: ['P0v1', 'P0v1'], 6: ['P0v2', 'wv1', 'xv1'], 
     9: ['P1v2', 'zv1'], 11: ['P1v2', 'zv1'], 
     13: ['P1v2', 'zv1']} """
-    usage = utils.compute_pattern_usage(ct.rewritten_graph(), 'P0v2', {2})
+    usage = utils.compute_pattern_usage(ct.rewritten_graph(), ['P0v2'], {2})
     assert usage == 3
-    usage = utils.compute_pattern_usage(ct.rewritten_graph(), 'zv1', {11, 9, 13})
+    usage = utils.compute_pattern_usage(ct.rewritten_graph(), ['zv1'], {11, 9, 13})
     assert usage == 3
+
+    rwg = nx.DiGraph()
+    rwg.add_node(1, is_Pattern=True, label='P1')
+    rwg.add_node(2)
+    rwg.add_node(3, is_Pattern=True, label='P2')
+    rwg.add_node(4, is_Pattern=True, label='P2')
+    rwg.add_node(5)
+    rwg.add_edge(1, 2, label='v1')
+    rwg.add_edge(1, 5, label='v2')
+    rwg.add_edge(3, 1, label='v2')
+    rwg.add_edge(3, 5, label='v1')
+    rwg.add_edge(4, 2, label='v1')
+    usage = utils.compute_pattern_usage(rwg, ['P1v1', 'P1v2'], {2, 5})
+    assert usage == 1
     # print(usage)
 
 
 def test_compute_candidate_usage():
     res = init_graph2()
     ct = res['ct']
-
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
     c1 = Candidate('P0', 'P0', [('v2', 'v2')])
     c1.first_pattern = res['p1']
     c1.second_pattern = res['p1']
     c1.data_port = {2}
-    utils.compute_candidate_usage(ct.rewritten_graph(), c1, ct)
+    utils.compute_candidate_usage(ct.rewritten_graph(), c1, ct, candidates)
     assert c1.usage == 1
 
     c2 = Candidate('P0', 'P1', [('v2', 'v1')])
     c2.first_pattern = res['p1']
     c2.second_pattern = res['p2']
     c2.data_port = {2}
-    utils.compute_candidate_usage(ct.rewritten_graph(), c2, ct)
+    utils.compute_candidate_usage(ct.rewritten_graph(), c2, ct, candidates)
     assert c2.usage == 3
 
     c3 = Candidate('z', 'P1', [('v1', 'v2')])
     c3.second_pattern = res['p2']
     with pytest.raises(ValueError):
-        utils.compute_candidate_usage(ct.rewritten_graph(), c3, ct)
+        utils.compute_candidate_usage(ct.rewritten_graph(), c3, ct, candidates)
 
     c4 = Candidate('w', 'x', [('v1', 'v1')])
     c4.data_port = {6}
-    utils.compute_candidate_usage(ct.rewritten_graph(), c4, ct)
+    utils.compute_candidate_usage(ct.rewritten_graph(), c4, ct, candidates)
     assert c4.usage == 1
 
     c5 = Candidate('P1', 'z', [('v2', 'v1')])
     c5.first_pattern = res['p2']
     c5.data_port = {11, 9, 13}
-    utils.compute_candidate_usage(ct.rewritten_graph(), c5, ct)
+    utils.compute_candidate_usage(ct.rewritten_graph(), c5, ct, candidates)
     assert c5.usage == 3
 
 
@@ -478,12 +492,10 @@ def test_is_candidate_port_exclusive():
 def test_get_candidates():
     res = init_graph2()
     ct = res['ct']
-    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
-    restricted_candidates = utils.get_candidates(candidates, ct.rewritten_graph(), ct)
+    restricted_candidates = utils.get_candidates(ct.rewritten_graph(), ct)
     assert len(restricted_candidates) == 8
     assert restricted_candidates[1].usage == 3
     assert restricted_candidates[1].exclusive_port_number == 0
-    assert restricted_candidates[6].exclusive_port_number == 3
 
 
 def test_merge_candidate():
@@ -525,3 +537,29 @@ def test_merge_candidate():
     g2 = utils.merge_candidate(c2)
     assert len(g2.nodes[1]['label']) == 2
     assert g2[1][4]['label'] == 'c'
+
+    c3 = Candidate('P0', 'P1', [('v1', 'v1'), ('v3', 'v3')])
+    c3.first_pattern = pa
+    c3.second_pattern = pb
+    g3 = utils.merge_candidate(c3)
+    assert len(g3.nodes()) == 4
+    assert g3.nodes[1]['label'] == ('A', 'D')
+    assert g3.nodes[3]['label'] == ('C', 'F')
+    assert g3[4][3] is not None
+
+    p1 = nx.DiGraph()
+    p1.add_node(1, label='y')
+    p1.add_node(2, label='z')
+    p1.add_edge(1, 2, label='b')
+
+    p2 = nx.DiGraph()
+    p2.add_node(1, label='x')
+    p2.add_node(2)
+    p2.add_edge(1, 2, label='a')
+    c4 = Candidate('P0', 'P1', [('v1', 'v2')])
+    c4.first_pattern = p1
+    c4.second_pattern = p2
+    g4 = utils.merge_candidate(c4)
+    assert len(g4.nodes()) == 3
+
+

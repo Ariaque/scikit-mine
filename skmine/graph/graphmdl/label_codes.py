@@ -4,13 +4,8 @@ import skmine.graph.graphmdl.utils as utils
 
 class LabelCodes:
     """
-      StandardTable : Initial code table for the GraphMDL algorithm
-      It's different of Krimp standard table
-      Here standard table is only a storage for label frequency in the initial data graph
+      It is only a storage for label frequency in the initial data graph
     """
-
-    # Authors : Arnauld Djedjemel
-    #           Francesco Bariatti
 
     def __init__(self, graph: Graph):
         """

@@ -458,20 +458,20 @@ def test_compute_description_length():
     res = init_graph()
     ct = res['ct']
     with pytest.raises(ValueError):
-        ct.compute_description_length()
+        ct.compute_ct_description_length()
 
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 112.75
 
     ct.add_row(res['row1'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 113.55
 
     ct.add_row(res['row2'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 103.29
 
     ct.remove_row(res['row1'])
@@ -479,22 +479,22 @@ def test_compute_description_length():
 
     ct.add_row(res['row3'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 102.23
 
     ct.add_row(res['row4'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 91.02
 
     ct.add_row(res['row5'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 108.91
 
     ct.add_row(res['row6'])
     ct.cover()
-    ct.compute_description_length()
+    ct.compute_ct_description_length()
     assert pytest.approx(ct.description_length(), rel=1e-01) == 118.0
 
 

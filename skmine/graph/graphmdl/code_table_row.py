@@ -96,6 +96,8 @@ class CodeTableRow:
         rows_usage_sum : total of usage for the code table rows
         """
         self._port_code_length = dict()
+
+        # Compute pattern code length
         if self._pattern_usage == 0:
             self._code_length = 0.0
         else:
@@ -106,6 +108,7 @@ class CodeTableRow:
         for k in self._pattern_port_usage.keys():
             port_usage_sum = port_usage_sum + self._pattern_port_usage[k]
 
+        # compute each port code length
         for p in self._pattern_port_usage.keys():
             if self._pattern_port_usage[p] == 0:
                 self._port_code_length[p] = 0.0
@@ -147,3 +150,9 @@ class CodeTableRow:
         float
         """
         return self._description_length
+
+    def __str__(self):
+        return "{} | {} |{} |{} |{} |{}" \
+            .format(self._pattern, self._pattern_usage, self._code_length,
+                    len(self._pattern_port_usage), self._pattern_port_usage,
+                    self._port_code_length)

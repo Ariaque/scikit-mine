@@ -266,6 +266,43 @@ def encode_singleton(standard_table, arity, label):
         raise ValueError("arity should must be 1 or 2")
 
 
+def _node_match(node1, node2):
+    """ Compare two given nodes
+    Parameters
+    ---------
+    node1
+    node2
+    Returns
+    -------
+    bool
+    """
+    if 'label' in node1 and 'label' in node2:
+        res = list()
+        for i in node2['label']:
+            res.append(i in node1['label'])
+        return not (False in res)
+    elif 'label' not in node1 and 'label' in node2:
+        return False
+    else:
+        return True
+
+
+def _edge_match(edge1, edge2):
+    """ Compare two given edges
+    Parameters
+    ----------
+    edge1
+    edge2
+    Returns
+    -------
+    bool
+    """
+    if 'label' in edge1 and 'label' in edge2:
+        return edge1['label'] == edge2['label']
+    else:
+        return True
+
+
 def get_embeddings(pattern, graph):
     """ Provide the embeddings of a pattern in a given graph
     Parameters
@@ -278,26 +315,9 @@ def get_embeddings(pattern, graph):
     """
 
     # Create functions to compare node and edge label
-    def node_match(n1, n2):
-        if 'label' in n1 and 'label' in n2:
-            res = list()
-            for i in n2['label']:
-                res.append(i in n1['label'])
-            return not (False in res)
-        elif 'label' not in n1 and 'label' in n2:
-            return False
-        else:
-            return True
-
-    def edge_match(e1, e2):
-        if 'label' in e1 and 'label' in e2:
-            return e1['label'] == e2['label']
-        else:
-            return True
-
     comp = {
-        'node_match': node_match,
-        'edge_match': edge_match
+        'node_match': _node_match,
+        'edge_match': _edge_match
     }
     graph_matcher = None
     # Create matcher according the graph type (directed or no)
@@ -366,6 +386,8 @@ def get_support(embeddings):
     """
     if len(embeddings) != 0:
         node_embeddings = dict()
+        # Compute for each pattern node, the graph nodes who can replace,
+        # and store it in a dictionary
         for e in embeddings:
             for i in e.items():
                 if i[1] in node_embeddings:
@@ -373,6 +395,8 @@ def get_support(embeddings):
                 else:
                     node_embeddings[i[1]] = set()
         embed = dict()
+        # Compute for each pattern node,the total number of graph nodes who could replace,
+        # and store it in a dictionary
         for key, value in node_embeddings.items():
             embed[key] = len(value)
 
@@ -460,13 +484,20 @@ def is_without_edge(pattern):
 
 
 def display_graph(graph: Graph):
+    """ Display a given graph in a specific string sequence
+    Parameters
+    ---------
+    graph
+    Returns
+    --------
+    str
+    """
     msg = ""
     for edge in graph.edges(data=True):
         if "label" in edge[2]:
             msg += "{}--{}-->{}".format(edge[0], edge[2]['label'], edge[1]) + "\n"
         else:
             msg += "{}--->{}".format(edge[0], edge[1]) + "\n"
-
     return msg
 
 
@@ -509,7 +540,7 @@ def get_key_from_value(data, value):
 
 
 def get_two_nodes_all_port(node1, node2, rewritten_graph):
-    """ Provide all port in a graph for a potentially candidate nodes
+    """ Provide all port in a graph for a potential candidate nodes
      Parameters
      ----------
      node1
@@ -558,6 +589,31 @@ def get_all_candidate_ports_labels_tuple(rewritten_graph, ports, first_node, sec
     return port
 
 
+def is_isomorphic(graph, pattern):
+    """ Check if two graph is isomorphic
+    Parameters
+    ---------
+    graph
+    pattern
+    Returns
+    -------
+    bool"""
+    opt = {
+        'node_match': _node_match,
+        'edge_match': _edge_match
+    }
+    graph_matcher = None
+    # Create matcher according the graph type (directed or no)
+
+    if nx.is_directed(graph):
+        graph_matcher = iso.DiGraphMatcher(graph, pattern, **opt)
+    else:
+        graph_matcher = iso.GraphMatcher(graph, pattern, **opt)
+
+    return graph_matcher.is_isomorphic()
+
+
+# To review begin
 def generate_candidates(rewritten_graph, code_table):
     """ Search in the rewritten graph, the pattern who share a same port
     Parameters
@@ -580,7 +636,7 @@ def generate_candidates(rewritten_graph, code_table):
                         first_pattern = node[1]['label']
                         # first_pattern_port = e[2]['label']
                         second_pattern = rewritten_graph.nodes[e2[0]]['label']
-                        # second_pattern_port = e2[2]['label']
+                        # second_pattern_port = edge2[2]['label']
                         # port_number = e[1]
                         all_candidate_port = get_two_nodes_all_port(node[0], e2[0], rewritten_graph)
 
@@ -590,7 +646,8 @@ def generate_candidates(rewritten_graph, code_table):
                         if 'is_singleton' not in node[1] and 'is_singleton' not in rewritten_graph.nodes[e2[0]]:
 
                             if int(first_pattern.split('P')[1]) < int(second_pattern.split('P')[1]):
-                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port, node[0], e2[0])
+                                ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port,
+                                                                             node[0], e2[0])
                                 c = Candidate(first_pattern, second_pattern, ports)
                             else:
                                 ports = get_all_candidate_ports_labels_tuple(rewritten_graph, all_candidate_port,
@@ -640,38 +697,46 @@ def compute_pattern_usage(rewritten_graph, pattern_format, ports):
     ports
     Returns
     -------
-    int
+    float
     """
     pattern_usage = 0
     ports_infos = get_port_node_infos(rewritten_graph)
+    # compute for each given ports, the information about his pattern neighbors
     for port in ports:
         infos = ports_infos[port]
+        # compute how many times, the pattern is the port neighbors
         for i in infos:
-            if i == pattern_format:
+            if i in pattern_format:
                 pattern_usage += 1
-    return pattern_usage
+        # If the pattern have different appearances as neighbors,
+        # return the pattern total usage sliced by the number of appearances
+    return pattern_usage / len(pattern_format)
 
 
-def compute_candidate_usage(rewritten_graph, candidate, code_table):
+def compute_candidate_usage(rewritten_graph, candidate, code_table, candidates):
     """ Compute an estimated usage for a  given candidate
     Parameters
     -----------
     rewritten_graph
     candidate
     code_table
+    candidates
     """
+    p1_format = []  # format of the first candidate pattern with its ports
+    p2_format = []  # format of the second candidate pattern with its ports
+    for p in candidate.port:
+        p1_format.append(candidate.first_pattern_label + p[0])
+        p2_format.append(candidate.second_pattern_label + p[1])
 
-    first_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.first_pattern_label + candidate.port[0][0],
-                                                list(candidate.data_port))
-    second_pattern_usage = compute_pattern_usage(rewritten_graph, candidate.second_pattern_label + candidate.port[0][1],
-                                                 list(candidate.data_port))
+    # Compute each candidate patterns usage
+    first_pattern_usage = compute_pattern_usage(rewritten_graph, p1_format, list(candidate.data_port))
+    second_pattern_usage = compute_pattern_usage(rewritten_graph, p2_format, list(candidate.data_port))
 
-    if candidate.first_pattern_label == candidate.second_pattern_label:
-
+    # Compute the candidate estimated usage according the candidate particularities
+    if candidate.first_pattern_label == candidate.second_pattern_label and \
+            (candidate == candidate.inverse() or candidate.inverse() not in candidates):
         candidate.set_usage(int(first_pattern_usage / 2))
-
     elif candidate.first_pattern is not None and candidate.second_pattern is not None:
-
         if is_without_edge(candidate.first_pattern) and not is_without_edge(candidate.second_pattern):
             # if only the second pattern doesn't have edges
             candidate.set_usage(second_pattern_usage)
@@ -761,6 +826,8 @@ def is_candidate_port_exclusive(candidates, candidate, port):
      bool
      """
     res = []
+    # search in the candidates list if there is one
+    # who are the given candidate data port as his data port
     for c in candidates:
         for p in c.data_port:
             if p == port:
@@ -769,11 +836,35 @@ def is_candidate_port_exclusive(candidates, candidate, port):
     return not (False in res)
 
 
-def get_candidates(candidates, rewritten_graph, code_table):
+def _order_candidates(candidate: Candidate):
+    """Provide the candidate elements to order candidates
+    Parameters
+    ----------
+    candidate
+    Returns
+    -------
+    list
+    """
+    return candidate.usage, candidate.exclusive_port_number, candidate.code_length
+
+
+def _compare_candidate(candidates):
+    """ Sort a given candidates list
+    Parameters
+    -----------
+    candidates
+    Returns
+    -------
+    list
+    """
+    candidates.sort(reverse=True, key=_order_candidates)
+    return candidates
+
+
+def get_candidates(rewritten_graph, code_table):
     """ Get the restricted list of candidates
     Parameters
     ----------
-    candidates
     rewritten_graph
     code_table
     Returns
@@ -781,6 +872,10 @@ def get_candidates(candidates, rewritten_graph, code_table):
     list
     """
     res = []
+    # generate an exhaustive list of candidates
+    candidates = generate_candidates(rewritten_graph, code_table)
+    # Assemble similar candidate,
+    # assemble also their ports
     for candidate in candidates:
         if candidate not in res:
             res.append(candidate)
@@ -789,10 +884,11 @@ def get_candidates(candidates, rewritten_graph, code_table):
             for p in candidate.data_port:
                 c.data_port.add(p)
 
-    # Search exclusive port
+    # Compute candidate estimated usage, exclusive port and merge pattern
     for r in res:
-        compute_candidate_usage(rewritten_graph, r, code_table)
+        compute_candidate_usage(rewritten_graph, r, code_table, candidates)
         exclusive_port_number = 0
+        # Search exclusive port
         for port in r.data_port:
             if is_candidate_port_exclusive(candidates, r, port):
                 exclusive_port_number += 1
@@ -806,8 +902,29 @@ def get_candidates(candidates, rewritten_graph, code_table):
         elif r.first_pattern is None and r.second_pattern is None:
             r.first_pattern = create_singleton_pattern(r.first_pattern_label, code_table)
             r.second_pattern = create_singleton_pattern(r.second_pattern_label, code_table)
+
+        r.final_pattern = merge_candidate(r)  # create merge pattern
+        # Compute candidate merge pattern description length
+        r.compute_description_length(code_table.label_codes())
+
+        # Filter the list by combining candidates with isomorphic merge patterns
+    i = 0
+    while i <= len(res) - 1:
+        j = i + 1
+        while j <= len(res) - 1:
+            if is_isomorphic(res[i].final_pattern, res[j].final_pattern):
+                couple = _compare_candidate([res[i], res[j]])
+                res.remove(couple[1])
+            j += 1
+        i += 1
+
+    # sort the definitive candidate list by estimated usage, exclusive port,
+    # and description length of the merge pattern
+    res.sort(reverse=True, key=_order_candidates)  # Sort the list
     return res
 
+
+# to review end
 
 def create_candidate_first_pattern(pattern, graph):
     """ Create a given candidate first pattern nodes and edges
@@ -816,47 +933,62 @@ def create_candidate_first_pattern(pattern, graph):
     pattern
     graph
     """
+    # create the pattern nodes with their labels in the given graph
     for node in pattern.nodes(data=True):
         if 'label' in node[1]:
             graph.add_node(node[0], label=node[1]['label'])
         else:
             graph.add_node(node[0])
-
+    # create the pattern edges with their labels  in the given graph
     for edge in pattern.edges(data=True):
         graph.add_edge(edge[0], edge[1], label=edge[2]['label'])
 
 
-def create_candidate_second_pattern(pattern, graph, port):
+def create_candidate_second_pattern(pattern, graph, ports):
     """ Create a given candidate second pattern nodes and edges,
         and connected it with the existent graph elements by the port
         Parameters
         ---------
         pattern
         graph
-        port
+        ports
     """
-    mapping = dict()
+    mapping = dict()  # Mapping between pattern nodes and graph nodes number
+    second_port = [p[1] for p in ports]  # pattern ports number
+    first_port = [p[0] for p in ports]  # graph ports number
+
+    # create the non-port pattern nodes with their labels in the graph
+    # for the pattern port node add only the labels if it's necessary
     for node in pattern.nodes(data=True):
-        if node[0] != port[1]:
+        if node[0] not in second_port:
             mapping[node[0]] = len(graph.nodes()) + 1
             if 'label' in node[1]:
                 graph.add_node(len(graph.nodes()) + 1, label=node[1]['label'])
             else:
                 graph.add_node(len(graph.nodes()) + 1)
         else:
+            index = second_port.index(node[0])
             if 'label' in node[1]:
-                if 'label' in graph.nodes[port[0]]:
-                    graph.nodes[port[0]]['label'] = graph.nodes[port[0]]['label'], node[1]['label']
+                if 'label' in graph.nodes[first_port[index]]:
+                    graph.nodes[first_port[index]]['label'] = graph.nodes[first_port[index]]['label'], node[1]['label']
                 else:
-                    graph.nodes[port[0]]['label'] = node[1]['label']
+                    graph.nodes[first_port[index]]['label'] = node[1]['label']
 
+    # Set the mapping for the pattern port node
+    for p in ports:
+        mapping[p[1]] = p[0]
+
+    # Create pattern edges with their labels
     for edge in pattern.edges(data=True):
-        if edge[0] == port[1]:
-            graph.add_edge(port[0], mapping[edge[1]], label=edge[2]['label'])
-        elif edge[1] == port[1]:
-            graph.add_edge(mapping[edge[0]], port[0], label=edge[2]['label'])
-        elif edge[0] == edge[1] == port[1]:
-            graph.add_edge(port[0], port[0], label=edge[2]['label'])
+        if edge[0] in second_port:
+            port = first_port[second_port.index(edge[0])]
+            graph.add_edge(port, mapping[edge[1]], label=edge[2]['label'])
+        elif edge[1] in second_port:
+            port = first_port[second_port.index(edge[1])]
+            graph.add_edge(mapping[edge[0]], port, label=edge[2]['label'])
+        elif edge[0] == edge[1] and edge[0] in port[1]:
+            port = first_port[second_port.index(edge[1])]
+            graph.add_edge(port[0], port, label=edge[2]['label'])
         else:
             graph.add_edge(mapping[edge[0]], mapping[edge[1]], label=edge[2]['label'])
 
@@ -892,13 +1024,14 @@ def merge_candidate(candidate):
     Graph
     """
     graph = nx.DiGraph()
+    ports = []
     for p in candidate.port:
         port = (int(p[0].split('v')[1]), int(p[1].split('v')[1]))
-        # Create first pattern node and edges
-        create_candidate_first_pattern(candidate.first_pattern, graph)
-        # Create second pattern node and edges
-        create_candidate_second_pattern(candidate.second_pattern, graph, port)
-
+        ports.append(port)
+    # Create first pattern node and edges
+    create_candidate_first_pattern(candidate.first_pattern, graph)
+    # Create second pattern node and edges
+    create_candidate_second_pattern(candidate.second_pattern, graph, ports)
     return graph
 
 

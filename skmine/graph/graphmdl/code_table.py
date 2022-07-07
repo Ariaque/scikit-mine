@@ -1,13 +1,12 @@
 from collections import defaultdict
+from .code_table_row import CodeTableRow
 import math
 import networkx as nx
-
-from .code_table_row import CodeTableRow
 import skmine.graph.graphmdl.utils as utils
 
 
 def _order_rows(row: CodeTableRow):
-    """ Provide the row pattern_code to order rows
+    """ Provide the row elements to order rows
     Parameters
     ----------
     row
@@ -473,22 +472,6 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
     return vertex_singleton_usage, edge_singleton_usage
 
 
-def display_row(row: CodeTableRow):
-    """ Display the code table row as a string
-    Parameters
-    ----------
-    row
-    Returns
-    ---------
-    str
-    """
-    msg = "{} | {} |{} |{} |{} |{}" \
-        .format(utils.display_graph(row.pattern()), row.pattern_usage(), row.code_length(),
-                len(row.pattern_port_usage()), row.pattern_port_usage(),
-                row.port_code_length())
-    return msg
-
-
 class CodeTable:
     """
         Code table inspired by Krimp algorithm
@@ -575,6 +558,99 @@ class CodeTable:
 
         self._compute_singleton_code(usage_sum)  # compute singleton code length
 
+    def compute_description_length(self):
+        """ Compute the total description length
+        Returns
+        -------
+        float
+        """
+        self.compute_ct_description_length()
+
+        return self._description_length + self.compute_rewritten_graph_description()
+
+    def compute_ct_description_length(self):
+        """ Compute this code table description length """
+        if len(self._rewritten_graph.nodes()) != 0:  # check if the code table is already covered
+            description_length = 0.0
+            for row in self._rows:
+                if row.pattern_usage() != 0:
+                    row.compute_description_length(self._standard_table)
+                    description_length += row.description_length()
+
+            description_length += self._compute_singleton_description_length()
+
+            self._description_length = description_length
+        else:
+            raise ValueError("You should cover the code table before computing his description")
+
+    def compute_rewritten_graph_description(self):
+        """ Compute description_length of the rewritten graph
+        Returns
+        -------
+        float
+        """
+        if len(self._rewritten_graph.nodes()) != 0:
+            desc = 0.0
+            for node in self._rewritten_graph.nodes(data=True):
+                if 'is_Pattern' in node[1] and 'is_singleton' not in node[1]:
+                    row_number = int(node[1]['label'].split('P')[1])
+                    embed_port = utils.get_port_node(self._rewritten_graph, node[0])
+                    desc += self._compute_embedding_pattern_description(row_number, embed_port)
+                elif 'is_Pattern' in node[1] and 'is_singleton' in node[1]:
+                    desc += self._compute_embedding_singleton_description(node[1]['label'])
+                else:
+                    desc += 0.0
+
+            return desc
+        else:
+            raise ValueError("You should first cover the code table")
+
+    def description_length(self):
+        """ Provide the code table description length
+        Returns
+        -------
+        float
+        """
+        return self._description_length
+
+    def rewritten_graph(self):
+        """ Provide the code table rewritten graph
+        Returns
+        -------
+        object
+        """
+        return self._rewritten_graph
+
+    def label_codes(self):
+        """ Provide the label codes
+        Returns
+        -------
+        object
+        """
+        return self._standard_table
+
+    def is_ct_edge_singleton(self, label):
+        """ provide if a given label is an edge singleton label
+        Parameters
+        ----------
+        label
+        Returns
+        -------
+        bool
+        """
+        return label in self._edge_singleton_usage
+
+    def is_ct_vertex_singleton(self, label):
+        """ provide if a given label is a vertex singleton label
+        Parameters
+        ----------
+        label
+        Returns
+        -------
+        bool
+        """
+        return label in self._vertex_singleton_usage
+
     def data_port(self):
         """ Provide all graph data port
         Returns
@@ -653,59 +729,6 @@ class CodeTable:
 
         return desc
 
-    def compute_description_length(self):
-        """ Compute this code table description length """
-        if len(self._rewritten_graph.nodes()) != 0:  # check if the code table is already covered
-            description_length = 0.0
-            for row in self._rows:
-                if row.pattern_usage() != 0:
-                    row.compute_description_length(self._standard_table)
-                    description_length += row.description_length()
-
-            description_length += self._compute_singleton_description_length()
-
-            self._description_length = description_length
-        else:
-            raise ValueError("You should cover the code table before computing his description")
-
-    def description_length(self):
-        """ Provide the code table description length
-        Returns
-        -------
-        float
-        """
-        return self._description_length
-
-    def rewritten_graph(self):
-        """ Provide the code table rewritten graph
-        Returns
-        -------
-        object
-        """
-        return self._rewritten_graph
-
-    def compute_rewritten_graph_description(self):
-        """ Compute description_length of the rewritten graph
-        Returns
-        -------
-        float
-        """
-        if len(self._rewritten_graph.nodes()) != 0:
-            desc = 0.0
-            for node in self._rewritten_graph.nodes(data=True):
-                if 'is_Pattern' in node[1] and 'is_singleton' not in node[1]:
-                    row_number = int(node[1]['label'].split('P')[1])
-                    embed_port = utils.get_port_node(self._rewritten_graph, node[0])
-                    desc += self._compute_embedding_pattern_description(row_number, embed_port)
-                elif 'is_Pattern' in node[1] and 'is_singleton' in node[1]:
-                    desc += self._compute_embedding_singleton_description(node[1]['label'])
-                else:
-                    desc += 0.0
-
-            return desc
-        else:
-            raise ValueError("You should first cover the code table")
-
     def _compute_embedding_pattern_description(self, row_number, embed_port):
         """ Compute description length for pattern embedding in the rewritten graph
         Parameters
@@ -757,32 +780,10 @@ class CodeTable:
         else:
             raise ValueError("The label should be a data graph label")
 
-    def is_ct_edge_singleton(self, label):
-        """ provide if a given label is an edge singleton label
-        Parameters
-        ----------
-        label
-        Returns
-        -------
-        bool
-        """
-        return label in self._edge_singleton_usage
-
-    def is_ct_vertex_singleton(self, label):
-        """ provide if a given label is a vertex singleton label
-        Parameters
-        ----------
-        label
-        Returns
-        -------
-        bool
-        """
-        return label in self._vertex_singleton_usage
-
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"
         for row in self._rows:
-            msg += display_row(row) + "\n"
+            msg += str(row) + "\n"
 
         for u, v in self._vertex_singleton_usage.items():
             msg += "{}|{}|{}".format(u, v, self._singleton_code_length[u]) + "\n"
