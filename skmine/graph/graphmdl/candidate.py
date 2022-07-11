@@ -16,8 +16,8 @@ class Candidate:
         self.data_port = set()  # candidate port number in the rewritten graph
         self.usage = 0  # estimated usage
         self.exclusive_port_number = 0
-        self.final_pattern = None  # merge pattern
-        self.code_length = 0.0   # merge pattern description length
+        self._final_pattern = None  # merge pattern
+        self.code_length = 0.0  # merge pattern description length
 
     def set_usage(self, usage):
         """ Set candidate estimated usage
@@ -26,6 +26,14 @@ class Candidate:
         usage
         """
         self.usage = usage
+
+    # @property
+    def final_pattern(self):
+        if self._final_pattern is None:
+            self._final_pattern = utils.merge_candidate(self)
+            return self._final_pattern
+        else:
+            return self._final_pattern
 
     def _is_ports_equals(self, ports):
         """ Check if the candidate ports list are similar to a given ports list

@@ -12,6 +12,7 @@ class GraphMDl:
         self._rewritten_graph = None
         self.description_length = 0.0
         self._patterns = []
+        self._already_test = []
 
     def _init_graph_mdl(self):
         """ Initialize the algorithm elements """
@@ -41,6 +42,7 @@ class GraphMDl:
     def _graph_mdl(self):
         """ Non-anytime graphmdl+ algorithm"""
         candidates = utils.get_candidates(self._rewritten_graph, self._code_table)
+        candidates.sort(reverse=True, key=self._order_candidates)  # sort the candidates list
         self._search_best_code_table(candidates)
 
     def _search_best_code_table(self, candidates):
@@ -54,33 +56,50 @@ class GraphMDl:
         """
         if len(candidates) != 0:
             for candidate in candidates:
-                # Add a candidate to a ct, cover and compute description length
-                temp_ct = self._code_table
-                row = CodeTableRow(candidate.final_pattern)
-                temp_ct.add_row(row)
-                temp_ct.cover()
-                temp_code_length = temp_ct.compute_description_length()
-                # if the new ct is better than the old, break and generate new candidates
-                # with the new ct
-                if temp_code_length < self.description_length:
-                    # self._code_table = temp_ct
-                    self._rewritten_graph = temp_ct.rewritten_graph()
-                    self.description_length = temp_code_length
-                    print("\n New CT", self._code_table)
-                    print("New DL ", self.description_length)
-                    self._graph_mdl()
-                elif temp_code_length > self.description_length and candidates.index(candidate) == len(
-                        candidates) - 1:
+                if candidate not in self._already_test:
+                    # Add a candidate to a ct, cover and compute description length
+                    temp_ct = self._code_table
+                    row = CodeTableRow(candidate.final_pattern())
+                    temp_ct.add_row(row)
+                    temp_ct.cover()
+                    temp_code_length = temp_ct.compute_description_length()
+                    self._already_test.append(candidate)
+                    # if the new ct is better than the old, break and generate new candidates
+                    # with the new ct
+                    if temp_code_length < self.description_length:
+                        # self._code_table = temp_ct
+                        self._rewritten_graph = temp_ct.rewritten_graph()
+                        self.description_length = temp_code_length
+                        # print("\n New CT", self._code_table)
+                        print("New DL ", self.description_length)
+                        print("new pattern added: ", utils.display_graph(row.pattern()))
+                        self._graph_mdl()
+                    # elif temp_code_length > self.description_length and candidates.index(candidate) == len(
+                    # candidates) - 1:
                     # if the last candidates doesn't improve the code table,
                     # then stop the algorithm
-                    print("\n None best code table found")
-                    temp_ct.remove_row(row)
-                    return self
-                else:
-                    # if the candidate not improve the result, remove it to the code table
-                    temp_ct.remove_row(row)
+
+                    # temp_ct.remove_row(row)
+                    # return self
+                    else:
+                        # if the candidate not improve the result, remove it to the code table
+                        temp_ct.remove_row(row)
+            print("\n None best code table found")
+            return self
         else:
             return self
+
+    def _order_candidates(self, candidate):
+        """Provide the candidate elements to order candidates
+        Parameters
+        ----------
+        candidate
+        Returns
+        -------
+        list
+        """
+        return [candidate.usage, candidate.exclusive_port_number,
+                -self._label_codes.encode(candidate.final_pattern())]
 
     def summary(self):
         print(self._code_table)
@@ -97,4 +116,4 @@ class GraphMDl:
             if r.code_length() != 0:
                 self._patterns.append(r.pattern())
 
-        return self.patterns
+        return self._patterns

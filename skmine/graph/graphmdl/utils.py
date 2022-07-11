@@ -483,6 +483,13 @@ def is_without_edge(pattern):
         return False
 
 
+def _get_node_labels(node, graph):
+    if 'label' in graph.nodes[node]:
+        return graph.nodes[node]['label']
+    else:
+        return node
+
+
 def display_graph(graph: Graph):
     """ Display a given graph in a specific string sequence
     Parameters
@@ -493,11 +500,16 @@ def display_graph(graph: Graph):
     str
     """
     msg = ""
-    for edge in graph.edges(data=True):
-        if "label" in edge[2]:
-            msg += "{}--{}-->{}".format(edge[0], edge[2]['label'], edge[1]) + "\n"
-        else:
-            msg += "{}--->{}".format(edge[0], edge[1]) + "\n"
+    if len(graph.edges()) != 0:
+        for edge in graph.edges(data=True):
+            if "label" in edge[2]:
+                msg += "{}--{}-->{}".format(_get_node_labels(edge[0], graph),
+                                            edge[2]['label'], _get_node_labels(edge[1], graph)) + "\n"
+            else:
+                msg += "{}--->{}".format(_get_node_labels(edge[0], graph),
+                                         _get_node_labels(edge[1], graph)) + "\n"
+    else:
+        msg += "{}".format(_get_node_labels(1, graph))
     return msg
 
 
@@ -611,6 +623,35 @@ def is_isomorphic(graph, pattern):
         graph_matcher = iso.GraphMatcher(graph, pattern, **opt)
 
     return graph_matcher.is_isomorphic()
+
+
+def get_automorphisms(graph):
+    """ Provide a pattern automorphisms
+    Parameters
+    ----------
+    graph
+    Returns
+    ---------
+    list
+    """
+    opt = {
+        'node_match': _node_match,
+        'edge_match': _edge_match
+    }
+    graph_matcher = None
+    # Create matcher according the graph type (directed or no)
+
+    if nx.is_directed(graph):
+        graph_matcher = iso.DiGraphMatcher(graph, graph, **opt)
+    else:
+        graph_matcher = iso.GraphMatcher(graph, graph, **opt)
+
+    automorphisms = set()
+    for auto in list(graph_matcher.isomorphisms_iter())[1:]:
+        for i, j in auto.items():
+            if i != j:
+                automorphisms.add((i, j))
+    return automorphisms
 
 
 # To review begin
@@ -845,7 +886,7 @@ def _order_candidates(candidate: Candidate):
     -------
     list
     """
-    return candidate.usage, candidate.exclusive_port_number, candidate.code_length
+    return [candidate.usage, candidate.exclusive_port_number]
 
 
 def _compare_candidate(candidates):
@@ -903,12 +944,12 @@ def get_candidates(rewritten_graph, code_table):
             r.first_pattern = create_singleton_pattern(r.first_pattern_label, code_table)
             r.second_pattern = create_singleton_pattern(r.second_pattern_label, code_table)
 
-        r.final_pattern = merge_candidate(r)  # create merge pattern
+        # r.final_pattern = merge_candidate(r)  # create merge pattern
         # Compute candidate merge pattern description length
-        r.compute_description_length(code_table.label_codes())
+        # r.compute_description_length(code_table.label_codes())
 
         # Filter the list by combining candidates with isomorphic merge patterns
-    i = 0
+    """ i = 0
     while i <= len(res) - 1:
         j = i + 1
         while j <= len(res) - 1:
@@ -916,11 +957,11 @@ def get_candidates(rewritten_graph, code_table):
                 couple = _compare_candidate([res[i], res[j]])
                 res.remove(couple[1])
             j += 1
-        i += 1
+        i += 1 """
 
     # sort the definitive candidate list by estimated usage, exclusive port,
     # and description length of the merge pattern
-    res.sort(reverse=True, key=_order_candidates)  # Sort the list
+    # res.sort(reverse=True, key=_order_candidates)  # Sort the list
     return res
 
 

@@ -153,6 +153,6 @@ class CodeTableRow:
 
     def __str__(self):
         return "{} | {} |{} |{} |{} |{}" \
-            .format(self._pattern, self._pattern_usage, self._code_length,
+            .format(utils.display_graph(self._pattern), self._pattern_usage, self._code_length,
                     len(self._pattern_port_usage), self._pattern_port_usage,
                     self._port_code_length)
