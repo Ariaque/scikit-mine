@@ -24,10 +24,9 @@ g.nodes[8]['label'] = 'w', 'x'
 
 def test_fit():
     with pytest.raises(ValueError):
-        GraphMDl().fit()
+        GraphMDl().fit(None)
 
     mdl = GraphMDl()
     mdl.fit(g)
-
     assert mdl.description_length != 0.0
     # assert len(mdl.patterns) != 0
