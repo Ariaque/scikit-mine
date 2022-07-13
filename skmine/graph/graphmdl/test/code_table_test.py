@@ -454,7 +454,7 @@ def test_cover():
     print(ct)
 
 
-def test_compute_description_length():
+def test_compute_ct_description_length():
     res = init_graph()
     ct = res['ct']
     with pytest.raises(ValueError):
