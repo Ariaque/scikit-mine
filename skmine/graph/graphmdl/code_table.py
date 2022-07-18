@@ -387,7 +387,7 @@ def create_rewrite_edge(rewritten_graph, rewritten_node, data_node, **kwargs):
         rewritten_graph.add_edge(rewritten_node, last + 1, label=f"v{kwargs['pattern_port']}")
 
 
-def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_number):
+def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_number, timeout=0):
     """ Cover a code table row on the graph with a given marker
     Parameters
     ----------
@@ -396,6 +396,7 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
     cover_marker
     rewritten_graph
     row_number
+    timeout
     """
     cover_usage = 0
     port_usage = dict()
@@ -407,7 +408,6 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
                 cover_usage = cover_usage + 1
                 create_pattern_node(rewritten_graph, row_number,
                                     ports)  # with experimental rewritten graph implementation
-
     else:
         for embedding in row.embeddings():
             keys = list(embedding.keys())
@@ -526,7 +526,7 @@ class CodeTable:
         """
         return self._rows
 
-    def cover(self):
+    def cover(self, timeout=0):
         """ Make the cover for the code table,
             the cover marker is get from the data graph
         """
@@ -542,7 +542,7 @@ class CodeTable:
 
         for row in self._rows:
             row_cover(row, self._data_graph, cover_marker, self._rewritten_graph,
-                      self.rows().index(row))  # with experimental rewritten graph implementation
+                      self.rows().index(row), timeout)  # with experimental rewritten graph implementation
 
         res = singleton_cover(self._data_graph, cover_marker,
                               self._rewritten_graph)  # with experimental rewritten graph implementation

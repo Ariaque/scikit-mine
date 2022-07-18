@@ -27,6 +27,6 @@ def test_fit():
         GraphMDl().fit(None)
 
     mdl = GraphMDl()
-    mdl.fit(g)
+    mdl.fit(g, iterations=2)
     assert mdl.description_length != 0.0
     # assert len(mdl.patterns) != 0
