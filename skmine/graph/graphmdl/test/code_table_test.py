@@ -515,8 +515,7 @@ def test_rewritten_graph():
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
     # assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
-    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
-    can = utils.get_candidates(candidates, ct.rewritten_graph())
+    can = utils.get_candidates(ct.rewritten_graph(), ct)
     print(can)
 
 

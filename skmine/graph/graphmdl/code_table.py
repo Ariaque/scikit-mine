@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from .code_table_row import CodeTableRow
 import math
@@ -339,7 +340,8 @@ def create_pattern_node(rewritten_graph, pattern_number, ports):
         for p in ports:
             create_rewrite_edge(rewritten_graph, node, p[0], pattern_port=p[1])
     else:
-        raise ValueError("ports shouldn't be empty")
+        last_node = len(rewritten_graph.nodes())
+        rewritten_graph.add_node(last_node + 1, label=f"P{pattern_number}", is_Pattern=True)
 
 
 def create_vertex_singleton_node(rewritten_graph, node_label, node_number):
@@ -459,14 +461,24 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
     # for node label
     for node in graph.nodes(data=True):
         if 'label' in node[1]:
-            for label in node[1]['label']:
-                if not is_node_marked(node[0], graph, cover_marker, label):
-                    vertex_singleton_usage[label] += 1
-                    mark_node(node[0], graph, cover_marker, label)
+            if type(node[1]['label']) is not str:
+                for label in node[1]['label']:
+                    if not is_node_marked(node[0], graph, cover_marker, label):
+                        vertex_singleton_usage[label] += 1
+                        mark_node(node[0], graph, cover_marker, label)
+                        if 'port' not in graph.nodes[node[0]]:  # if the node is not already marked as port
+                            graph.nodes[node[0]]['port'] = True
+
+                        create_vertex_singleton_node(rewritten_graph, label,
+                                                     node[0])  # with experimental rewritten graph implementation
+            else:
+                if not is_node_marked(node[0], graph, cover_marker, node[1]['label']):
+                    vertex_singleton_usage[node[1]['label']] += 1
+                    mark_node(node[0], graph, cover_marker, node[1]['label'])
                     if 'port' not in graph.nodes[node[0]]:  # if the node is not already marked as port
                         graph.nodes[node[0]]['port'] = True
 
-                    create_vertex_singleton_node(rewritten_graph, label,
+                    create_vertex_singleton_node(rewritten_graph, node[1]['label'],
                                                  node[0])  # with experimental rewritten graph implementation
 
     return vertex_singleton_usage, edge_singleton_usage
@@ -491,9 +503,9 @@ class CodeTable:
             Thus singleton ports are intuitive 
         """
         self._vertex_singleton_usage = dict()  # singleton vertex usage
-        self._edge_singleton_usage = dict()    # singleton edge usage
-        self._singleton_code_length = dict()   # singleton pattern code length
-        self._rewritten_graph = nx.DiGraph()   # A directed graph who represents the rewritten graph
+        self._edge_singleton_usage = dict()  # singleton edge usage
+        self._singleton_code_length = dict()  # singleton pattern code length
+        self._rewritten_graph = nx.DiGraph()  # A directed graph who represents the rewritten graph
 
     def add_row(self, row: CodeTableRow):
         """ Add a new row at the code table
@@ -530,6 +542,7 @@ class CodeTable:
         """ Make the cover for the code table,
             the cover marker is get from the data graph
         """
+        b = time.time()
         # Get the cover marker and increment it
         if 'cover_marker' in self._data_graph.graph:
             self._data_graph.graph['cover_marker'] += 1
@@ -549,14 +562,7 @@ class CodeTable:
 
         self._vertex_singleton_usage = res[0]  # Store vertex singleton usage
         self._edge_singleton_usage = res[1]  # Store edge singleton usage
-
-        # compute each row code length and description length
-        usage_sum = self._compute_usage_sum()
-        for row in self._rows:
-            row.compute_code_length(usage_sum)
-            row.compute_description_length(self._standard_table)
-
-        self._compute_singleton_code(usage_sum)  # compute singleton code length
+        print(f"cover time...{time.time() - b}")
 
     def compute_description_length(self):
         """ Compute the total description length
@@ -570,7 +576,16 @@ class CodeTable:
 
     def compute_ct_description_length(self):
         """ Compute this code table description length """
-        if len(self._rewritten_graph.nodes()) != 0:  # check if the code table is already covered
+        if len(self._rewritten_graph.nodes()) != 0:
+            # compute each row code length and description length
+            usage_sum = self._compute_usage_sum()
+            for row in self._rows:
+                row.compute_code_length(usage_sum)
+                row.compute_description_length(self._standard_table)
+
+            self._compute_singleton_code(usage_sum)  # compute singleton code length
+
+            # check if the code table is already covered
             description_length = 0.0
             for row in self._rows:
                 if row.pattern_usage() != 0:
@@ -779,6 +794,9 @@ class CodeTable:
             return desc
         else:
             raise ValueError("The label should be a data graph label")
+
+    def singleton_code_length(self):
+        return self._singleton_code_length
 
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"

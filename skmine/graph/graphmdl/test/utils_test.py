@@ -398,14 +398,8 @@ def test_generate_candidates():
     res = init_graph2()
     ct = res['ct']
 
-    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
-
-    assert len(candidates) == 44
-    assert candidates[0].first_pattern is not None
-    assert candidates[0].second_pattern is not None
-    assert len(candidates[0].data_port) != 0
-    print(candidates)
-    assert candidates[12].second_pattern is None
+    candidates = utils.generate_candidates_2(ct.rewritten_graph(), ct)
+    # print(candidates)
 
 
 def test_compute_pattern_usage():
@@ -543,23 +537,23 @@ def test_merge_candidate():
     c3.second_pattern = pb
     g3 = utils.merge_candidate(c3)
     assert len(g3.nodes()) == 4
-    assert g3.nodes[1]['label'] == ('A', 'D')
-    assert g3.nodes[3]['label'] == ('C', 'F')
+    assert g3.nodes[1]['label'] == ('D', 'A')
+    assert g3.nodes[3]['label'] == ('F', 'C')
     assert g3[4][3] is not None
 
     p1 = nx.DiGraph()
-    p1.add_node(1, label='y')
-    p1.add_node(2, label='z')
-    p1.add_edge(1, 2, label='b')
+    p1.add_node(1, label='C')
+    p1.add_node(2)
+    p1.add_node(3, label='C')
+    p1.add_edge(1, 2, label='single')
+    p1.add_edge(3, 1, label='single')
 
     p2 = nx.DiGraph()
     p2.add_node(1, label='x')
     p2.add_node(2)
     p2.add_edge(1, 2, label='a')
-    c4 = Candidate('P0', 'P1', [('v1', 'v2')])
+    c4 = Candidate('P1', 'P1', [('v2', 'v3'), ('v3', 'v2'), ('v1', 'v1')])
     c4.first_pattern = p1
-    c4.second_pattern = p2
+    c4.second_pattern = p1
     g4 = utils.merge_candidate(c4)
     assert len(g4.nodes()) == 3
-
-
