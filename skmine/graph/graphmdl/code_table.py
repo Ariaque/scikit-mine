@@ -33,17 +33,9 @@ def is_node_marked(node_number, graph, cover_marker, label):
     bool
 
     """
-    if node_number in graph.nodes() and \
-            label in graph.nodes(data=True)[node_number]['label']:
+    if node_number in graph.nodes() and label in graph.nodes(data=True)[node_number]['label']:
         node = graph.nodes(data=True)[node_number]
-        if 'cover_mark' in node \
-                and label in node['cover_mark'] \
-                and node['cover_mark'][label] == cover_marker:
-
-            return True
-
-        else:
-            return False
+        return 'cover_mark' in node and label in node['cover_mark'] and node['cover_mark'][label] == cover_marker
     else:
         raise ValueError(f"{node_number} should be a graph node and {label} a node label")
 
@@ -60,11 +52,7 @@ def is_node_labels_marked(node_number, graph, cover_marker, labels):
     --------
     bool"""
     if type(labels) is tuple:
-        res = list()
-        for label in labels:
-            res.append(is_node_marked(node_number, graph, cover_marker, label))
-
-        return not (False in res)
+        return not (False in [is_node_marked(node_number, graph, cover_marker, label) for label in labels])
     else:
         return is_node_marked(node_number, graph, cover_marker, labels)
 
@@ -113,17 +101,10 @@ def is_edge_marked(start, end, graph, cover_marker, label):
       ---------
       bool
       """
-    if start in graph.nodes() and \
-            end in graph.nodes() and \
+    if start in graph.nodes() and end in graph.nodes() and \
             graph[start][end] is not None and 'label' in graph[start][end]:
-
         edge = graph[start][end]
-        if 'cover_mark' in edge \
-                and label in edge['cover_mark'] \
-                and edge['cover_mark'][label] == cover_marker:
-            return True
-        else:
-            return False
+        return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][label] == cover_marker
     else:
         raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
                          f"Also the edge should have a label ")
@@ -408,8 +389,8 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
                 mark_embedding(embedding, graph, row.pattern(), cover_marker)
                 ports = search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
                 cover_usage = cover_usage + 1
-                create_pattern_node(rewritten_graph, row_number,
-                                    ports)  # with experimental rewritten graph implementation
+                # create the pattern in the rewritten graph
+                create_pattern_node(rewritten_graph, row_number, ports)
     else:
         for embedding in row.embeddings():
             keys = list(embedding.keys())
@@ -422,6 +403,7 @@ def row_cover(row: CodeTableRow, graph, cover_marker, rewritten_graph, row_numbe
                     ports = search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
                     cover_usage = cover_usage + 1
                     mark_node(keys[i], graph, cover_marker, label)
+                    # create the pattern in the rewritten graph
                     create_pattern_node(rewritten_graph, row_number,
                                         ports)  # with experimental rewritten graph implementation
 
@@ -449,15 +431,13 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
     for edge in graph.edges(data=True):
         if not is_edge_marked(edge[0], edge[1], graph, cover_marker, edge[2]['label']):
             edge_singleton_usage[edge[2]['label']] += 1
-            mark_edge(edge[0], edge[1], graph, cover_marker, edge[2]['label'])
+            mark_edge(edge[0], edge[1], graph, cover_marker, edge[2]['label'])  # Mark the edge
+            # Mark the edge nodes as data port
+            graph.nodes[edge[0]]['port'] = True
+            graph.nodes[edge[1]]['port'] = True
 
-            if 'port' not in graph.nodes[edge[0]]:
-                graph.nodes[edge[0]]['port'] = True
-            if 'port' not in graph.nodes[edge[1]]:
-                graph.nodes[edge[1]]['port'] = True
-
-            create_edge_singleton_node(rewritten_graph, edge[2]['label'], edge[0],
-                                       edge[1])  # with experimental rewritten graph implementation
+            # create the singleton embedding in the rewritten graph
+            create_edge_singleton_node(rewritten_graph, edge[2]['label'], edge[0], edge[1])
     # for node label
     for node in graph.nodes(data=True):
         if 'label' in node[1]:
@@ -466,20 +446,16 @@ def singleton_cover(graph, cover_marker, rewritten_graph):
                     if not is_node_marked(node[0], graph, cover_marker, label):
                         vertex_singleton_usage[label] += 1
                         mark_node(node[0], graph, cover_marker, label)
-                        if 'port' not in graph.nodes[node[0]]:  # if the node is not already marked as port
-                            graph.nodes[node[0]]['port'] = True
-
-                        create_vertex_singleton_node(rewritten_graph, label,
-                                                     node[0])  # with experimental rewritten graph implementation
+                        graph.nodes[node[0]]['port'] = True  # mark the node as port
+                        # create the singleton embedding in the rewritten graph
+                        create_vertex_singleton_node(rewritten_graph, label, node[0])
             else:
                 if not is_node_marked(node[0], graph, cover_marker, node[1]['label']):
                     vertex_singleton_usage[node[1]['label']] += 1
                     mark_node(node[0], graph, cover_marker, node[1]['label'])
-                    if 'port' not in graph.nodes[node[0]]:  # if the node is not already marked as port
-                        graph.nodes[node[0]]['port'] = True
-
-                    create_vertex_singleton_node(rewritten_graph, node[1]['label'],
-                                                 node[0])  # with experimental rewritten graph implementation
+                    graph.nodes[node[0]]['port'] = True  # mark as port
+                    # create the singleton embedding in the rewritten graph
+                    create_vertex_singleton_node(rewritten_graph, node[1]['label'], node[0])
 
     return vertex_singleton_usage, edge_singleton_usage
 
@@ -554,14 +530,20 @@ class CodeTable:
         self._rewritten_graph = nx.DiGraph()  # reset the rewritten graph before each cover
 
         for row in self._rows:
-            row_cover(row, self._data_graph, cover_marker, self._rewritten_graph,
-                      self.rows().index(row), timeout)  # with experimental rewritten graph implementation
+            row_cover(row, self._data_graph, cover_marker, self._rewritten_graph, self.rows().index(row), timeout)
 
-        res = singleton_cover(self._data_graph, cover_marker,
-                              self._rewritten_graph)  # with experimental rewritten graph implementation
+        res = singleton_cover(self._data_graph, cover_marker, self._rewritten_graph)
 
         self._vertex_singleton_usage = res[0]  # Store vertex singleton usage
         self._edge_singleton_usage = res[1]  # Store edge singleton usage
+
+        usage_sum = self._compute_usage_sum()  # Get the total of the rows usage
+        # compute each row code length and description length
+        for row in self._rows:
+            row.compute_code_length(usage_sum)
+            row.compute_description_length(self._standard_table)
+
+        self._compute_singleton_code(usage_sum)  # compute singleton code length
         print(f"cover time...{time.time() - b}")
 
     def compute_description_length(self):
@@ -576,20 +558,11 @@ class CodeTable:
 
     def compute_ct_description_length(self):
         """ Compute this code table description length """
-        if len(self._rewritten_graph.nodes()) != 0:
-            # compute each row code length and description length
-            usage_sum = self._compute_usage_sum()
-            for row in self._rows:
-                row.compute_code_length(usage_sum)
-                row.compute_description_length(self._standard_table)
-
-            self._compute_singleton_code(usage_sum)  # compute singleton code length
-
+        if len(self._rewritten_graph.nodes()) != 0:  # Check if the cover is done
             # check if the code table is already covered
             description_length = 0.0
             for row in self._rows:
                 if row.pattern_usage() != 0:
-                    row.compute_description_length(self._standard_table)
                     description_length += row.description_length()
 
             description_length += self._compute_singleton_description_length()
@@ -782,7 +755,7 @@ class CodeTable:
         float
         """
         desc = 0.0
-        if label in self._vertex_singleton_usage:
+        if label in self._vertex_singleton_usage :
             desc += self._singleton_code_length[label]
             desc += math.log2(2)  # port_count = 2 and total_port_code = 0
             desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 1))
@@ -804,10 +777,7 @@ class CodeTable:
         for row in self._rows:
             msg += str(row) + "\n"
 
-        for u, v in self._vertex_singleton_usage.items():
-            msg += "{}|{}|{}".format(u, v, self._singleton_code_length[u]) + "\n"
-
-        for u, v in self._edge_singleton_usage.items():
+        for u, v in self._singleton_code_length.items():
             msg += "{}|{}|{}".format(u, v, self._singleton_code_length[u]) + "\n"
 
         return msg

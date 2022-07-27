@@ -1,3 +1,5 @@
+import time
+
 import networkx as nx
 import pytest
 import skmine.graph.graphmdl.utils as utils
@@ -476,6 +478,8 @@ def test_is_candidate_port_exclusive():
     candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
     c = Candidate('P0', 'P0', [('v1', 'v1')])
     c1 = Candidate('P0', 'P0', [('v2', 'v2')])
+    utils.is_candidate_port_exclusive(candidates, c, 5)
+
     assert utils.is_candidate_port_exclusive(candidates, c, 5) is True
     assert utils.is_candidate_port_exclusive(candidates, c1, 2) is False
 
