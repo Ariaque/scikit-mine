@@ -704,6 +704,7 @@ class CodeTable:
         ----------
         usage_sum : Total of pattern ( even singleton) usage in the code table
         """
+        self._singleton_code_length = dict()
         if len(self._vertex_singleton_usage) != 0:
             for u, v in self._vertex_singleton_usage.items():
                 if utils.log2(v, usage_sum) == -0.0:

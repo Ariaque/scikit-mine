@@ -224,12 +224,6 @@ def test_is_edge_singleton():
     g2.add_node(2, label='a')
     assert utils.is_edge_singleton(g2) is False
 
-    g3 = nx.DiGraph()
-    g3.add_node(1)
-    g3.add_node(2)
-    g3.add_edge(1, 2)
-    assert utils.is_edge_singleton(g3) is False
-
     g4 = nx.Graph()
     g4.add_node(1)
     g4.add_node(2)
@@ -398,7 +392,10 @@ def test_generate_candidates():
     res = init_graph2()
     ct = res['ct']
 
-    candidates = utils.generate_candidates_2(ct.rewritten_graph(), ct)
+    candidates = utils.generate_candidates(ct.rewritten_graph(), ct)
+    assert len(candidates) == 8
+    assert candidates[0].first_pattern_label == 'P0'
+    assert candidates[7].second_pattern_label == 'z'
     # print(candidates)
 
 
@@ -488,8 +485,8 @@ def test_get_candidates():
     ct = res['ct']
     restricted_candidates = utils.get_candidates(ct.rewritten_graph(), ct)
     assert len(restricted_candidates) == 8
-    assert restricted_candidates[1].usage == 3
-    assert restricted_candidates[1].exclusive_port_number == 0
+    assert restricted_candidates[0].usage == 3
+    assert restricted_candidates[7].exclusive_port_number == 3
 
 
 def test_merge_candidate():

@@ -21,7 +21,7 @@ class GraphMDl(BaseMiner):
         self._code_table = None
         self._rewritten_graph = None
         self.description_length = 0.0
-        self._patterns = []
+        self._patterns = set()
         self._already_test = []
         self._pruning_rows = []
         self._old_usage = dict()
@@ -297,12 +297,17 @@ class GraphMDl(BaseMiner):
         """
         for r in self._code_table.rows():
             if r.code_length() != 0:
-                self._patterns.append(r.pattern())
+                self._patterns.add(r.pattern())
 
         return self._patterns
 
     def discover(self, *args, **kwargs):
         print(self._code_table)
         print("final description length : ", self.description_length)
-        print("non singleton patterns_number : ", len(self._patterns))
-        print("singleton patterns_number : ", len(self._code_table.singleton_code_length()))
+        print("Non singleton patterns found : ")
+        for p in self.patterns():
+            print('\n', utils.display_graph(p))
+        if len(self._code_table.singleton_code_length()) != 0:
+            print("Singleton patterns found : ")
+            for s in self._code_table.singleton_code_length().keys():
+                print("\n", s)

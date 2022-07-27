@@ -27,7 +27,6 @@ class Candidate:
         """
         self.usage = usage
 
-    # @property
     def final_pattern(self):
         if self._final_pattern is None:
             self._final_pattern = utils.merge_candidate(self)
@@ -44,13 +43,10 @@ class Candidate:
         Returns
         -------
         bool"""
-        res = []
         if len(ports) != len(self.port):
             return False
         else:
-            for p in self.port:
-                res.append(p in ports)
-            return not (False in res)
+            return not (False in [p in ports for p in self.port])
 
     def compute_description_length(self, label_codes):
         """ Compute description length from the label codes to the candidate merge pattern
@@ -79,8 +75,13 @@ class Candidate:
         ports = []
         for p in self.port:
             ports.append((p[1], p[0]))
+        c = self.first_pattern_label
+        self.first_pattern_label = self.second_pattern_label
+        self.second_pattern_label = c
+        self.port = ports
+        del c
 
-        return Candidate(self.second_pattern_label, self.first_pattern_label, ports)
+        return self
 
     def __str__(self) -> str:
         return "<{},{},{}>".format(self.first_pattern_label, self.second_pattern_label, self.port)
