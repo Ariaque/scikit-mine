@@ -514,7 +514,7 @@ class CodeTable:
         """
         return self._rows
 
-    def cover(self, timeout=0):
+    def cover(self, timeout=0, debug=False):
         """ Make the cover for the code table,
             the cover marker is get from the data graph
         """
@@ -544,7 +544,8 @@ class CodeTable:
             row.compute_description_length(self._standard_table)
 
         self._compute_singleton_code(usage_sum)  # compute singleton code length
-        print(f"cover time...{time.time() - b}")
+        if debug:
+            print(f"cover time...{time.time() - b}")
 
     def compute_description_length(self):
         """ Compute the total description length

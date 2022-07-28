@@ -22,19 +22,6 @@ g.nodes[7]['label'] = 'z'
 g.nodes[8]['label'] = 'w', 'x'
 
 
-def get_graph_from_file(file):
-    file = open(file)
-    lines = [line.split(' ') for line in file][3:]
-    graph = nx.DiGraph()
-    for line in lines:
-        if line[0] == 'v':
-            graph.add_node(int(line[1]) + 1, label=line[3].split('\n')[0])
-        else:
-            graph.add_edge(int(line[1]) + 1, int(line[2]) + 1, label=line[3].split('\n')[0])
-    file.close()
-    return graph
-
-
 def test_fit():
     with pytest.raises(ValueError):
         GraphMDl().fit(None)

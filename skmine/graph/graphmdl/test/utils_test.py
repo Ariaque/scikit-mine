@@ -489,8 +489,8 @@ def test_get_candidates():
     ct = res['ct']
     restricted_candidates = utils.get_candidates(ct.rewritten_graph(), ct)
     assert len(restricted_candidates) == 8
-    assert restricted_candidates[0].usage == 3
-    assert restricted_candidates[7].exclusive_port_number == 3
+    assert restricted_candidates[1].usage == 3.0
+    assert restricted_candidates[6].exclusive_port_number == 3
 
 
 def test_merge_candidate():
