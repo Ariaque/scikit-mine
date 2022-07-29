@@ -1,5 +1,9 @@
 import time
 from collections import defaultdict
+
+import numpy
+import pandas
+
 from .code_table_row import CodeTableRow
 import math
 import networkx as nx
@@ -756,7 +760,7 @@ class CodeTable:
         float
         """
         desc = 0.0
-        if label in self._vertex_singleton_usage :
+        if label in self._vertex_singleton_usage:
             desc += self._singleton_code_length[label]
             desc += math.log2(2)  # port_count = 2 and total_port_code = 0
             desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 1))
@@ -772,6 +776,15 @@ class CodeTable:
 
     def singleton_code_length(self):
         return self._singleton_code_length
+
+    def display_ct(self):
+        data = [row.display_row() for row in self._rows if row.pattern_usage() != 0]
+        for u, v in self._singleton_code_length.items():
+            data.append([u, v, '', '', '', ''])
+        return pandas.DataFrame(numpy.array(data),
+                                columns=['Pattern Structure', 'Pattern usage', 'Pattern code length',
+                                         'Port count', 'Pattern port usage',
+                                         'Pattern port code length'])
 
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"

@@ -1,14 +1,15 @@
-""" Utils function"""
+"""  Function Utilities  """
 import math
 from collections import Counter
 import networkx as nx
+from matplotlib import pyplot as plt
 from networkx import Graph
 from networkx.algorithms import isomorphism as iso
 from ..graphmdl.candidate import Candidate
 
 
 def log2(value, total):
-    """ Compute log2
+    """ Compute logarithm in the binary base
     Parameters
     ----------
     value
@@ -22,16 +23,14 @@ def log2(value, total):
 
 
 def count_edge_label(graph: Graph):
-    """ Compute edge label instance in a graph and store the result
-
-       Parameters
-       ----------
-       graph:Graph
-         the treated graph
-
-       Returns
-       -------
-         dict
+    """ Count each edge label occurrence in a graph and store the result
+    Parameters
+    ----------
+    graph:Graph
+        the data graph
+    Returns
+    -------
+    dict
     """
 
     edges = dict()
@@ -49,18 +48,15 @@ def count_edge_label(graph: Graph):
 
 
 def count_vertex_label(graph: Graph):
-    """ Compute vertex label instance in a graph and store the result
-
-         Parameters
-         ----------
-         graph:Graph
-           the treated graph
-
-         Returns
-         -------
-           dict
+    """ Count each vertex label occurrence in a graph and store the result
+        Parameters
+        ----------
+        graph:Graph
+            the data graph
+        Returns
+        -------
+        dict
       """
-
     vertex = dict()
     j = 1
     for u, d in graph.nodes(data=True):
@@ -80,8 +76,7 @@ def get_total_label(graph: Graph):
        Parameters
        ----------
        graph:Graph
-         the treated graph
-
+         the data graph
        Returns
        -------
          float
@@ -98,15 +93,13 @@ def get_total_label(graph: Graph):
 
 def binomial(n, k):
     """ Compute the binomial coefficient for a given n and given k. Also called "n choose k"
-
     Parameters
     ----------
     n
     k
-
     Returns
     -------
-      float
+    float
     """
     if k > n:
         raise ValueError(f"{k} should be lower than {n} in binomial coefficient")
@@ -119,15 +112,13 @@ def binomial(n, k):
 
 
 def universal_integer_encoding(x):
-    """ Compute universal codeword sets and representation for integers from 1
-
+    """ Compute universal codeword sets and representation for integer except 1
     Parameters
     ----------
     x
-
     Returns
     -------
-      int
+    int
     """
     if x < 1:
         raise ValueError(f"{x} should be higher than 1")
@@ -136,12 +127,10 @@ def universal_integer_encoding(x):
 
 
 def universal_integer_encoding_with0(x):
-    """ Compute universal codeword sets and representation for integers from 0
-
+    """ Compute universal codeword sets and representation for integer
     Parameters
     ----------
     x
-
     Returns
     -------
     int
@@ -153,13 +142,12 @@ def universal_integer_encoding_with0(x):
 
 
 def encode(pattern: Graph, standard_table):
-    """ Compute a graph description length
-
+    """ Compute a given graph description length according a given label codes
     Parameters
     ----------
-    standard_table
-    pattern
-
+    standard_table : The label codes
+    pattern : Graph
+        The given graph
     Returns
     -------
     float
@@ -169,7 +157,6 @@ def encode(pattern: Graph, standard_table):
 
     # Get total number of label in the standard table
     total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
-
     vertex_number = len(pattern.nodes())
 
     total_label_description = math.log2(total_label)  # description length for all labels
@@ -183,7 +170,6 @@ def encode(pattern: Graph, standard_table):
         vertex_description[u] = desc
 
     # Compute description length for edges
-
     edges_description = dict()
     for a, b in edges.items():
         desc = standard_table.edges_lc()[a] + universal_integer_encoding_with0(b) + math.log2(
@@ -202,17 +188,16 @@ def encode(pattern: Graph, standard_table):
 
 def encode_vertex_singleton(standard_table, vertex_label):
     """ Compute a vertex singleton description length
-
         Parameters
         ----------
-        standard_table
-        vertex_label
+        standard_table : a labels codes
+        vertex_label : The vertex singleton label
         Returns
         -------
         float
     """
-    if vertex_label == "":
-        raise ValueError(f"{vertex_label} shouldn't be empty ")
+    if vertex_label == "" or vertex_label is None:
+        raise ValueError(f"You should give a vertex label")
     else:
         # Get total number of label in the standard table
         total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
@@ -228,18 +213,16 @@ def encode_vertex_singleton(standard_table, vertex_label):
 
 def encode_edge_singleton(standard_table, edge_label):
     """ Compute an edge singleton description length
-
-            Parameters
-            ----------
-            standard_table
-            edge_label
-
-            Returns
-            -------
-            float
+        Parameters
+        ----------
+        standard_table : a labels codes
+        edge_label : the edge singleton label
+        Returns
+        -------
+        float
     """
-    if edge_label == "":
-        raise ValueError(f"{edge_label} shouldn't be empty")
+    if edge_label == "" or edge_label is None:
+        raise ValueError("You should give an edge label")
     else:
         # Get total number of label in the standard table
         total_label = len(standard_table.vertex_lc()) + len(standard_table.edges_lc())
@@ -253,13 +236,12 @@ def encode_edge_singleton(standard_table, edge_label):
 
 
 def encode_singleton(standard_table, arity, label):
-    """ Compute a singleton description length by her arity
-
+    """ Compute a singleton description length according her arity
         Parameters
         ----------
-        standard_table
-        label
-        arity
+        standard_table : a label codes
+        label : The singleton label
+        arity : 1 for the vertex singleton and 2 for the edge singleton
         Returns
         -------
         float
@@ -346,17 +328,11 @@ def is_vertex_singleton(pattern):
     ---------
     bool
     """
-    if len(pattern.nodes()) == 1:
-        if get_total_label(pattern) == 1:
-            return True
-        else:
-            return False
-    else:
-        return False
+    return len(pattern.nodes()) == 1 and get_total_label(pattern) == 1
 
 
 def is_edge_singleton(pattern):
-    """ Check if a given pattern is a edge singleton pattern
+    """ Check if a given pattern is an edge singleton pattern
     Parameters
     ---------
     pattern
@@ -383,10 +359,13 @@ def is_edge_singleton(pattern):
 
 def get_support(embeddings):
     """ Compute the pattern support in the graph according a minimum image based support
+
+    The minimum image-based support is the minimum number of graph nodes,
+    that a pattern node can replace
+
     Parameters
     ---------
     embeddings
-
     Returns
     -------
     int
@@ -449,14 +428,12 @@ def get_node_label(key, index, graph):
 
 
 def get_edge_label(start, end, graph):
-    """ Provide a particular edge label in a given graph by the edge start, edge end
-
+    """ Provide a particular edge label in a given graph by the edge start and the edge end
     Parameters
     ---------
     start
     end
     graph
-
     Returns
     ---------
     str
@@ -479,18 +456,25 @@ def is_without_edge(pattern):
     Parameters
     ----------
     pattern
-
     Returns
     ---------
     bool
     """
-    if len(pattern.edges()) == 0:
-        return True
-    else:
-        return False
+    return len(pattern.edges()) == 0
 
 
 def _get_node_labels(node, graph):
+    """ Provide the labels for a particular graph node,
+    if the node doesn't have labeled, return the node
+
+    Parameters
+    ----------
+    node
+    graph
+    Returns
+    --------
+    str
+    """
     if 'label' in graph.nodes[node]:
         return graph.nodes[node]['label']
     else:
@@ -520,15 +504,49 @@ def display_graph(graph: Graph):
     return msg
 
 
+def draw_pattern(g: Graph):
+    """ Draw a given pattern
+    Parameters
+    ----------
+    g
+    """
+    pos = nx.spring_layout(g, seed=7)
+    edge_labels = dict([((u, v,), d['label']) for u, v, d in g.edges(data=True)])
+    node_labels = dict([(u, d['label']) for u, d in g.nodes(data=True) if 'label' in d])
+    plt.figure(1, figsize=(2, 2))
+    nx.draw(g, pos, with_labels=True)
+    nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels, font_color="red", font_weight="bold", font_size=14)
+    nx.draw_networkx_labels(g, pos, node_labels, font_color="red", font_weight="bold", font_size=14)
+    plt.show()
+
+
+def draw_graph(g: Graph):
+    """ Draw a given graph
+       Parameters
+       ----------
+       g
+       """
+    # Draw the graph with the edge label
+    pos = nx.spring_layout(g, seed=7)
+    edge_labels = dict([((u, v,), d['label']) for u, v, d in g.edges(data=True)])
+    node_labels = dict([(u, d['label']) for u, d in g.nodes(data=True)])
+    plt.figure(1, figsize=(8, 8))
+    nx.draw(g, pos, with_labels=True)
+    nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels, font_color="red", font_weight="bold", font_size=14)
+    nx.draw_networkx_labels(g, pos, node_labels, font_color="red", font_weight="bold", font_size=14)
+    plt.show()
+
+
 def get_edge_in_embedding(embedding, pattern):
-    """ Provide the pattern edge who are in an embedding
+    """ Provide the pattern edges who are in a given embedding
     Parameters
     ----------
     embedding
     pattern
     Returns
     -------
-    set"""
+    set
+    """
     keys = list(embedding.keys())
     values = list(embedding.values())
     edges = set()
@@ -548,7 +566,7 @@ def get_edge_in_embedding(embedding, pattern):
 
 
 def get_key_from_value(data, value):
-    """ Provide a key in the dictionary from the value
+    """ Provide a dictionary key from the value
     Parameters
     ----------
     data
@@ -567,7 +585,6 @@ def get_two_nodes_all_port(node1, node2, rewritten_graph):
      node1
      node2
      rewritten_graph
-
      Returns
      -------
      list
@@ -588,7 +605,7 @@ def get_two_nodes_all_port(node1, node2, rewritten_graph):
 
 
 def get_all_candidate_ports_labels_tuple(rewritten_graph, ports, first_node, second_node, inverse=False):
-    """ Provide a list with port label tuple for a given two nodes who are a candidate
+    """ Provide a port tuples for a given two nodes who are a candidate
     Parameters
     ---------
     rewritten_graph
@@ -620,6 +637,7 @@ def is_isomorphic(graph, pattern):
     Returns
     -------
     bool"""
+
     opt = {
         'node_match': _node_match,
         'edge_match': _edge_match

@@ -1,5 +1,5 @@
 import networkx as nx
-from skmine.graph.graphmdl.graph_mdl import GraphMDl
+from skmine.graph.graphmdl.graph_mdl import GraphMDL
 import pytest
 
 g = nx.DiGraph()
@@ -24,9 +24,9 @@ g.nodes[8]['label'] = 'w', 'x'
 
 def test_fit():
     with pytest.raises(ValueError):
-        GraphMDl().fit(None)
+        GraphMDL().fit(None)
 
-    mdl = GraphMDl()
+    mdl = GraphMDL()
     mdl.fit(g)
     # mdl.summary()
     assert mdl.description_length != 0.0

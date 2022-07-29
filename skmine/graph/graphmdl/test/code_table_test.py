@@ -451,7 +451,7 @@ def test_cover():
     ct.add_row(res['row6'])
     ct.cover()
 
-    print(ct)
+    print(ct.display_ct())
 
 
 def test_compute_ct_description_length():

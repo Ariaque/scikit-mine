@@ -12,7 +12,7 @@ class CodeTableRow:
         self._pattern = pattern
         self._pattern_usage = pattern_usage
         self._pattern_port_usage = pattern_port_usage
-        self._embeddings = []   # the pattern embeddings in the data
+        self._embeddings = []  # the pattern embeddings in the data
         self._code_length = 0.0
         self._port_code_length = None  # the pattern ports code
         self._description_length = 0.0
@@ -150,6 +150,10 @@ class CodeTableRow:
         float
         """
         return self._description_length
+
+    def display_row(self):
+        return [utils.draw_pattern(self._pattern), self._pattern_usage, self._code_length, len(self._pattern_port_usage),
+                self._pattern_port_usage, self._port_code_length]
 
     def __str__(self):
         return "{} | {} |{} |{} |{} |{}" \
