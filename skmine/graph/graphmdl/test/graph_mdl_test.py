@@ -26,12 +26,12 @@ def test_fit():
     with pytest.raises(ValueError):
         GraphMDL().fit(None)
 
-    mdl = GraphMDL()
+    mdl = GraphMDL(debug=True)
     mdl.fit(g)
     # mdl.summary()
     assert mdl.description_length() != 0.0
 
-    assert GraphMDL().fit(g, timeout=0.01).description_length() !=0
+    assert GraphMDL().fit(g, timeout=0.01).description_length() != 0
 
 
 def test_patterns():
