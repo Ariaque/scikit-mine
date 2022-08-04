@@ -3,13 +3,22 @@ from skmine.graph.graphmdl import utils
 
 class Candidate:
     """
-        it represents candidate whose format is <P1,P2,{(v1,v1)..}> in the algorithm,
+        It represents candidate whose format is <P1,P2,{(v1,v1)..}> in the algorithm,
         here, P1 and P2 are patterns and the last parameters, a port list
+
+        Parameters
+        -----------
+        first_pattern_label : str
+            It's the candidate first pattern name
+        second_pattern_label : str
+            It's the candidate second pattern name
+        port: list
+            It's the candidate port list
     """
 
-    def __init__(self, first_pattern, second_pattern, port):
-        self.first_pattern_label = first_pattern
-        self.second_pattern_label = second_pattern
+    def __init__(self, first_pattern_label, second_pattern_label, port):
+        self.first_pattern_label = first_pattern_label
+        self.second_pattern_label = second_pattern_label
         self.first_pattern = None
         self.second_pattern = None
         self.port = port  # list of the candidate port association
@@ -28,6 +37,11 @@ class Candidate:
         self.usage = usage
 
     def final_pattern(self):
+        """ Provide the candidate merge pattern
+        Returns
+        --------
+        object
+        """
         if self._final_pattern is None:
             self._final_pattern = utils.merge_candidate(self)
             return self._final_pattern
@@ -39,7 +53,6 @@ class Candidate:
         Parameters
         ----------
         ports
-
         Returns
         -------
         bool"""

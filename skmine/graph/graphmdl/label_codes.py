@@ -5,15 +5,14 @@ import skmine.graph.graphmdl.utils as utils
 class LabelCodes:
     """
       It is only a storage for label frequency in the initial data graph
+
+      Parameters
+      -----------
+      graph:Graph
+         the treated graph
     """
 
     def __init__(self, graph: Graph):
-        """
-             Parameters
-             -----------
-               graph:Graph
-                 the treated graph
-            """
         self._total_label = utils.get_total_label(graph)
         self._vertexLC = dict([(u, utils.log2(v, self._total_label))
                                for u, v in utils.count_vertex_label(graph).items()])  # Vertex label code length
@@ -21,8 +20,7 @@ class LabelCodes:
                              for u, v in utils.count_edge_label(graph).items()])    # edge label code length
 
     def display_vertex_lc(self):
-        """ Display vertexLC content
-
+        """ Display vertex label code length
             Returns
             --------
             str
@@ -34,11 +32,11 @@ class LabelCodes:
 
     def display_edge_lc(self):
 
-        """ Display vertexLC content
+        """ Display edge label code length
 
-                   Returns
-                   --------
-                   str
+            Returns
+            --------
+            str
         """
         msg = ""
         for i, j in self._edgeLC.items():
@@ -47,7 +45,7 @@ class LabelCodes:
 
     def total_label(self):
         """
-        Provide labels total number
+        Provide the total number of labels
         Returns
         -------
         double
@@ -56,7 +54,7 @@ class LabelCodes:
 
     def vertex_lc(self):
         """
-        Provide all vertex and their values from the label codes
+        Provide the code length from all vertex label
         Returns
         -------
         dict
@@ -65,15 +63,15 @@ class LabelCodes:
 
     def edges_lc(self):
         """
-        Provide all edges and their values from the label codes
+        Provide the code length from all edge label
         Returns
         -------
-
+        dict
         """
         return self._edgeLC
 
     def encode(self, pattern: Graph):
-        """ Compute description length of a pattern with this label codes
+        """ Compute description length of a given pattern with this label codes
         Parameters
         ----------
         pattern
@@ -84,10 +82,11 @@ class LabelCodes:
         return utils.encode(pattern, self)
 
     def encode_singleton_vertex(self, vertex_singleton_label):
-        """ Compute description length of a vertex singleton pattern with this label codes
+        """ Compute description length of a given vertex singleton pattern with this label codes
         Parameters
         ----------
         vertex_singleton_label
+            The given vertex singleton label
         Returns
         ---------
         float
@@ -95,7 +94,7 @@ class LabelCodes:
         return utils.encode_singleton(self, 1, vertex_singleton_label)
 
     def encode_singleton_edge(self, edge_singleton_label):
-        """ Compute description length of an edge singleton pattern with this label codes
+        """ Compute description length of a given edge singleton pattern with this label codes
         Parameters
         ----------
         edge_singleton_label

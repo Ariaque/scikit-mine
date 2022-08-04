@@ -1,6 +1,10 @@
 """  Function Utilities  """
+import logging
 import math
+import os
 from collections import Counter
+from datetime import datetime
+
 import networkx as nx
 from matplotlib import pyplot as plt
 from networkx import Graph
@@ -636,7 +640,8 @@ def is_isomorphic(graph, pattern):
     pattern
     Returns
     -------
-    bool"""
+    bool
+    """
 
     opt = {
         'node_match': _node_match,
@@ -654,7 +659,7 @@ def is_isomorphic(graph, pattern):
 
 
 def get_automorphisms(graph):
-    """ Provide a pattern automorphisms
+    """ Provide a given graph automorphisms
     Parameters
     ----------
     graph
@@ -683,7 +688,7 @@ def get_automorphisms(graph):
 
 
 # To review begin
-def generate_candidates_2(rewritten_graph, code_table):
+"""def generate_candidates_2(rewritten_graph, code_table):
     candidates = list()
     for node in rewritten_graph.nodes(data=True):
         if 'is_Pattern' in node[1] and node[1]['is_Pattern'] is True:  # Check if the node is a pattern
@@ -741,10 +746,18 @@ def generate_candidates_2(rewritten_graph, code_table):
                             c.data_port.add(p)
                         candidates.append(c)
                     i += 1
-    return candidates
+    return candidates"""
 
 
 def get_port_candidates(patterns_list):
+    """ Provide a list of node tuple from the given list
+    Parameters
+    ----------
+    patterns_list
+    Returns
+    -------
+    list
+    """
     res = set()
     i = 0
     while i <= len(patterns_list) - 1:
@@ -762,7 +775,7 @@ def compute_pattern_usage(rewritten_graph, pattern_format, ports):
     ---------
     rewritten_graph
     pattern_format: The pattern label concatenated with the port label
-    ports
+    ports : The pattern candidates ports
     Returns
     -------
     float
@@ -787,8 +800,8 @@ def compute_candidate_usage(rewritten_graph, candidate, code_table, candidates):
     -----------
     rewritten_graph
     candidate
-    code_table
-    candidates
+    code_table : a Code Table
+    candidates :candidates list
     """
     p1_format = []  # format of the first candidate pattern with its ports
     p2_format = []  # format of the second candidate pattern with its ports
@@ -818,9 +831,7 @@ def compute_candidate_usage(rewritten_graph, candidate, code_table, candidates):
             candidate.set_usage(min(first_pattern_usage, second_pattern_usage))
 
     elif candidate.second_pattern is not None and candidate.first_pattern is None:
-
         raise ValueError("The singleton should be the second pattern")
-
     elif candidate.first_pattern is not None and candidate.second_pattern is None:
 
         # A pattern with a singleton
@@ -867,28 +878,13 @@ def compute_pattern_embeddings(rewritten_graph, pattern):
     return res
 
 
-def get_candidate_from_data(data, candidate):
-    """ Provide a candidate who match with a given candidate from a list
-    Parameters
-    -----------
-    data
-    candidate
-    Returns
-    -------
-    Candidate
-    """
-    for c in data:
-        if candidate == c:
-            return c
-
-
 def is_candidate_port_exclusive(candidates, candidate, port):
-    """ Check if a port are neighbors who are not the candidate nodes number
+    """ Check if a given  port are neighbors who are not the candidate nodes number
      Parameters
      -----------
-     candidates
+     candidates : Candidates list
      candidate
-     port
+     port : The given port
      Returns
      ----------
      bool
@@ -904,41 +900,15 @@ def is_candidate_port_exclusive(candidates, candidate, port):
     return not (False in res)
 
 
-def _order_candidates(candidate: Candidate):
-    """Provide the candidate elements to order candidates
-    Parameters
-    ----------
-    candidate
-    Returns
-    -------
-    list
-    """
-    return [candidate.usage, candidate.exclusive_port_number]
-
-
-def _compare_candidate(candidates):
-    """ Sort a given candidates list
-    Parameters
-    -----------
-    candidates
-    Returns
-    -------
-    list
-    """
-    candidates.sort(reverse=True, key=_order_candidates)
-    return candidates
-
-
-def get_candidates(rewritten_graph, code_table):
-    """ Get the restricted list of candidates
-    Parameters
-    ----------
-    rewritten_graph
-    code_table
-    Returns
-    -------
-    list
-    """
+"""def get_candidates(rewritten_graph, code_table):
+     #Get the restricted list of candidates
+    #Parameters
+    #----------
+    #rewritten_graph
+    #code_table
+    #Returns
+    #-------
+    # list
     res = []
     # generate an exhaustive list of candidates
     candidates = generate_candidates_2(rewritten_graph, code_table)
@@ -976,7 +946,7 @@ def get_candidates(rewritten_graph, code_table):
         # r.compute_description_length(code_table.label_codes())
 
         # Filter the list by combining candidates with isomorphic merge patterns
-    """ i = 0
+     i = 0
     while i <= len(res) - 1:
         j = i + 1
         while j <= len(res) - 1:
@@ -984,12 +954,12 @@ def get_candidates(rewritten_graph, code_table):
                 couple = _compare_candidate([res[i], res[j]])
                 res.remove(couple[1])
             j += 1
-        i += 1 """
+        i += 1 
 
     # sort the definitive candidate list by estimated usage, exclusive port,
     # and description length of the merge pattern
     # res.sort(reverse=True, key=_order_candidates)  # Sort the list
-    return res
+    return res"""
 
 
 def generate_candidates(rewritten_graph, code_table):
@@ -1179,6 +1149,15 @@ def create_singleton_pattern(label, code_table):
 
 
 def _get_new_label(first_label, second_label):
+    """ Associate two given list of label
+    Parameters
+    -----------
+    first_label
+    second_label
+    Returns
+    -------
+    list
+    """
     if type(second_label) is str:
         if type(first_label) is str:
             if first_label != second_label:
@@ -1311,6 +1290,14 @@ def get_port_node(rewritten_graph, node):
 
 
 def get_graph_from_file(file):
+    """ Construct a networkx graph from a given file
+    Parameters
+    ----------
+    file
+    Returns
+    -------
+    Graph
+    """
     file = open(file)
     lines = [line.split(' ') for line in file][3:]
     graph = nx.DiGraph()
@@ -1321,3 +1308,34 @@ def get_graph_from_file(file):
             graph.add_edge(int(line[1]) + 1, int(line[2]) + 1, label=line[3].split('\n')[0])
     file.close()
     return graph
+
+
+class MyLogger:
+    _logger = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._logger is None:
+
+            cls._logger = super().__new__(cls, *args, **kwargs)
+            cls._logger = logging.getLogger("crumbs")
+            cls._logger.setLevel(logging.INFO)
+            formatter = logging.Formatter(
+                '%(asctime)s \t [%(levelname)s | %(filename)s:%(lineno)s] > %(message)s')
+
+            now = datetime.now()
+            dirname = "./log"
+
+            if not os.path.isdir(dirname):
+                os.mkdir(dirname)
+            fileHandler = logging.FileHandler(
+                dirname + "/log_" + now.strftime("%Y-%m-%d") + ".log")
+
+            streamHandler = logging.StreamHandler()
+
+            fileHandler.setFormatter(formatter)
+            streamHandler.setFormatter(formatter)
+
+            cls._logger.addHandler(fileHandler)
+            cls._logger.addHandler(streamHandler)
+
+        return cls._logger

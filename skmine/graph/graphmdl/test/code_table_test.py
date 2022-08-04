@@ -6,82 +6,87 @@ from ..label_codes import LabelCodes
 
 
 def test_is_node_marked():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(1)
     test.nodes[1]['label'] = 'x', 'w'
 
     with pytest.raises(ValueError):
-        is_node_marked(6, test, 1, 'x')
-        is_node_marked(1, test, 1, 'a')
+        ct.is_node_marked(6, test, 1, 'x')
+        ct.is_node_marked(1, test, 1, 'a')
 
-    assert is_node_marked(1, test, 1, 'x') is False
+    assert ct.is_node_marked(1, test, 1, 'x') is False
     test.nodes[1]['cover_mark'] = {'x': 1}
-    assert is_node_marked(1, test, 1, 'x') is True
+    assert ct.is_node_marked(1, test, 1, 'x') is True
 
 
 def test_is_node_labels_marked():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(1)
     test.nodes[1]['label'] = 'x', 'w'
 
     with pytest.raises(ValueError):
-        is_node_labels_marked(6, test, 1, 'x')
-        is_node_labels_marked(1, test, 1, 'a')
+        ct.is_node_labels_marked(6, test, 1, 'x')
+        ct.is_node_labels_marked(1, test, 1, 'a')
 
     test.nodes[1]['cover_mark'] = {'x': 1}
-    assert is_node_labels_marked(1, test, 1, ('x', 'w')) is False
+    assert ct.is_node_labels_marked(1, test, 1, ('x', 'w')) is False
     test.nodes[1]['cover_mark'] = {'x': 1, 'w': 1}
-    assert is_node_labels_marked(1, test, 1, ('x', 'w')) is True
+    assert ct.is_node_labels_marked(1, test, 1, ('x', 'w')) is True
 
 
 def test_is_edge_marked():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(range(1, 3))
     test.add_edge(1, 2, label='e')
 
     with pytest.raises(ValueError):
-        is_edge_marked(2, 3, test, 1, 'e')
-        is_edge_marked(1, 2, test, 1, 'a')
+        ct.is_edge_marked(2, 3, test, 1, 'e')
+        ct.is_edge_marked(1, 2, test, 1, 'a')
 
-    assert is_edge_marked(1, 2, test, 1, 'e') is False
+    assert ct.is_edge_marked(1, 2, test, 1, 'e') is False
     test[1][2]['cover_mark'] = {'e': 1}
-    assert is_edge_marked(1, 2, test, 1, 'e') is True
+    assert ct.is_edge_marked(1, 2, test, 1, 'e') is True
 
 
 def test_mark_node():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(1, label='x')
 
     with pytest.raises(ValueError):
-        mark_node(1, test, 1, None)
+        ct.mark_node(1, test, 1, None)
 
-    mark_node(1, test, 1, 'x')
-    assert is_node_marked(1, test, 1, 'x') is True
+    ct.mark_node(1, test, 1, 'x')
+    assert ct.is_node_marked(1, test, 1, 'x') is True
 
     test.nodes[1]['label'] = test.nodes[1]['label'], 'w'
-    mark_node(1, test, 2, ('x', 'w'))
+    ct.mark_node(1, test, 2, ('x', 'w'))
 
-    assert is_node_marked(1, test, 1, 'x') is False
-    assert is_node_marked(1, test, 2, 'x') is True
-    assert is_node_marked(1, test, 2, 'w') is True
+    assert ct.is_node_marked(1, test, 1, 'x') is False
+    assert ct.is_node_marked(1, test, 2, 'x') is True
+    assert ct.is_node_marked(1, test, 2, 'w') is True
 
 
 def test_mark_edge():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(1, label='x')
     test.add_node(2)
     test.add_edge(1, 2, label='e')
 
     with pytest.raises(ValueError):
-        mark_edge(1, 2, test, 1, None)
-        mark_edge(1, 2, test, 1, 'f')
+        ct.mark_edge(1, 2, test, 1, None)
+        ct.mark_edge(1, 2, test, 1, 'f')
 
-    mark_edge(1, 2, test, 1, 'e')
-    assert is_edge_marked(1, 2, test, 1, 'e') is True
+    ct.mark_edge(1, 2, test, 1, 'e')
+    assert ct.is_edge_marked(1, 2, test, 1, 'e') is True
 
-    mark_edge(1, 2, test, 2, 'e')
-    assert is_edge_marked(1, 2, test, 1, 'e') is False
-    assert is_edge_marked(1, 2, test, 2, 'e') is True
+    ct.mark_edge(1, 2, test, 2, 'e')
+    assert ct.is_edge_marked(1, 2, test, 1, 'e') is False
+    assert ct.is_edge_marked(1, 2, test, 2, 'e') is True
 
 
 def init_gtest():
@@ -112,54 +117,56 @@ def test_is_embedding_marked():
     gtest = init_gtest()[0]
     pattern = init_gtest()[1]
     embeddings = init_gtest()[2]
-    assert is_embedding_marked(embeddings[0], pattern, gtest, 1) is False
+    ct = init_gtest()[4]
+    assert ct.is_embedding_marked(embeddings[0], pattern, gtest, 1) is False
 
     gtest[1][2]['cover_mark'] = {'e': 1}
-    assert is_embedding_marked(embeddings[0], pattern, gtest, 1) is True
+    assert ct.is_embedding_marked(embeddings[0], pattern, gtest, 1) is True
 
-    mark_edge(1, 2, gtest, 2, 'e')
-    assert is_embedding_marked(embeddings[0], pattern, gtest, 1) is False
-    assert is_embedding_marked(embeddings[0], pattern, gtest, 2) is True
+    ct.mark_edge(1, 2, gtest, 2, 'e')
+    assert ct.is_embedding_marked(embeddings[0], pattern, gtest, 1) is False
+    assert ct.is_embedding_marked(embeddings[0], pattern, gtest, 2) is True
 
 
 def test_mark_embedding():
     gtest = init_gtest()[0]
     pattern = init_gtest()[1]
     embeddings = init_gtest()[2]
-    mark_embedding(embeddings[0], gtest, pattern, 1)
+    ct = init_gtest()[4]
+    ct.mark_embedding(embeddings[0], gtest, pattern, 1)
 
-    assert is_edge_marked(1, 2, gtest, 1, 'e') is True
-    assert is_node_marked(1, gtest, 1, 'A') is True
-    assert is_node_marked(2, gtest, 1, 'A') is False
+    assert ct.is_edge_marked(1, 2, gtest, 1, 'e') is True
+    assert ct.is_node_marked(1, gtest, 1, 'A') is True
+    assert ct.is_node_marked(2, gtest, 1, 'A') is False
 
-    mark_embedding(embeddings[0], gtest, pattern, 2)
-    assert is_edge_marked(1, 2, gtest, 1, 'e') is False
-    assert is_node_marked(1, gtest, 1, 'A') is False
+    ct.mark_embedding(embeddings[0], gtest, pattern, 2)
+    assert ct.is_edge_marked(1, 2, gtest, 1, 'e') is False
+    assert ct.is_node_marked(1, gtest, 1, 'A') is False
 
-    assert is_edge_marked(1, 2, gtest, 2, 'e') is True
-    assert is_node_marked(1, gtest, 2, 'A') is True
+    assert ct.is_edge_marked(1, 2, gtest, 2, 'e') is True
+    assert ct.is_node_marked(1, gtest, 2, 'A') is True
 
     pattern.nodes[2]['label'] = 'A'
-    mark_embedding(embeddings[0], gtest, pattern, 1)
-    assert is_node_marked(2, gtest, 1, 'A') is True
+    ct.mark_embedding(embeddings[0], gtest, pattern, 1)
+    assert ct.is_node_marked(2, gtest, 1, 'A') is True
 
 
 def test_get_node_label_number():
     test = nx.Graph()
     test.add_node(1)
-    # test.nodes[1]['label'] = 'a'
+    ct = init_gtest()[4]
 
     with pytest.raises(ValueError):
-        get_node_label_number(2, test)
+        ct.get_node_label_number(2, test)
 
     test.nodes[1]['label'] = 'a'
-    assert get_node_label_number(1, test) == 1
+    assert ct.get_node_label_number(1, test) == 1
 
     test.nodes[1]['label'] = test.nodes[1]['label'], 'b'
-    assert get_node_label_number(1, test) == 2
+    assert ct.get_node_label_number(1, test) == 2
 
     test.add_node(2)
-    assert get_node_label_number(2, test) == 0
+    assert ct.get_node_label_number(2, test) == 0
 
 
 def test_search_port():
@@ -175,16 +182,17 @@ def test_search_port():
     ptest1.add_node(1, label='x')
     ptest1.add_node(2)
     ptest1.add_edge(1, 2, label='a')
+    ct = init_gtest()[4]
 
     embed = utils.get_embeddings(ptest1, test1)
-    mark_embedding(embed[0], test1, ptest1, 1)
-    mark_embedding(embed[1], test1, ptest1, 1)
+    ct.mark_embedding(embed[0], test1, ptest1, 1)
+    ct.mark_embedding(embed[1], test1, ptest1, 1)
     port_usage = dict()
-    ports = search_port(test1, embed[0], 1, ptest1, port_usage)
+    ports = ct.search_port(test1, embed[0], 1, ptest1, port_usage)
     assert ports[0][0] == 40
     assert ports[0][1] == 1
     assert (1 in port_usage.keys()) is True
-    search_port(test1, embed[1], 1, ptest1, port_usage)
+    ct.search_port(test1, embed[1], 1, ptest1, port_usage)
     assert port_usage[1] != 1
 
 
@@ -192,13 +200,15 @@ def test_is_node_edges_marked():
     gtest = init_gtest()[0]
     pattern = init_gtest()[1]
     embeddings = init_gtest()[2]
-    mark_embedding(embeddings[0], gtest, pattern, 1)
+    ct = init_gtest()[4]
+    ct.mark_embedding(embeddings[0], gtest, pattern, 1)
 
-    assert is_node_edges_marked(gtest, 1, pattern, 1) is True
-    assert is_node_edges_marked(gtest, 2, pattern, 1) is False
+    assert ct.is_node_edges_marked(gtest, 1, pattern, 1) is True
+    assert ct.is_node_edges_marked(gtest, 2, pattern, 1) is False
 
 
 def test_is_node_all_labels_marked():
+    ct = init_gtest()[4]
     test = nx.Graph()
     test.add_node(1, label='x')
     test.add_node(3, label='y')
@@ -207,11 +217,11 @@ def test_is_node_all_labels_marked():
     test.add_edge(1, 2, label='e')
     test.add_edge(2, 3, label='e')
 
-    mark_node(2, test, 1, 'x')
-    mark_node(1, test, 1, 'x')
+    ct.mark_node(2, test, 1, 'x')
+    ct.mark_node(1, test, 1, 'x')
 
-    assert is_node_all_labels_marked(2, test, 1) is False
-    assert is_node_all_labels_marked(1, test, 1) is True
+    assert ct.is_node_all_labels_marked(2, test, 1) is False
+    assert ct.is_node_all_labels_marked(1, test, 1) is True
 
 
 def test_row_cover():
@@ -219,6 +229,7 @@ def test_row_cover():
     pattern = init_gtest()[1]
     embeddings = init_gtest()[2]
     rewritten_graph = init_gtest()[5]
+    ct = init_gtest()[4]
 
     ptest = nx.Graph()
     ptest.add_node(1, label='x')
@@ -234,27 +245,28 @@ def test_row_cover():
     row_test = CodeTableRow(ptest)
     row_test.set_embeddings(utils.get_embeddings(ptest, test))
     # with pytest.raises(ValueError):
-    row_cover(row_test, test, 1, rewritten_graph, 0)
-    assert is_node_marked(1, test, 1, ptest.nodes(data=True)[1]['label']) is True
-    assert is_node_marked(2, test, 1, ptest.nodes(data=True)[1]['label']) is True
+    ct.row_cover(row_test, test, 1, rewritten_graph, 0)
+    assert ct.is_node_marked(1, test, 1, ptest.nodes(data=True)[1]['label']) is True
+    assert ct.is_node_marked(2, test, 1, ptest.nodes(data=True)[1]['label']) is True
 
     row = CodeTableRow(pattern)
     row.set_embeddings(embeddings)
 
-    row_cover(row, gtest, 1, rewritten_graph, 1)
+    ct.row_cover(row, gtest, 1, rewritten_graph, 1)
 
     for edge in gtest.edges(data=True):
-        assert is_edge_marked(edge[0], edge[1], gtest, 1, gtest[edge[0]][edge[1]]['label']) is True
+        assert ct.is_edge_marked(edge[0], edge[1], gtest, 1, gtest[edge[0]][edge[1]]['label']) is True
 
     for node in gtest.nodes(data=True):
         if node[1]['label'] == 'A':
-            assert is_node_marked(node[0], gtest, 1, node[1]['label']) is True
+            assert ct.is_node_marked(node[0], gtest, 1, node[1]['label']) is True
         else:
-            assert is_node_marked(node[0], gtest, 1, node[1]['label']) is False
+            assert ct.is_node_marked(node[0], gtest, 1, node[1]['label']) is False
 
 
 def test_singleton_cover():
     rewritten_graph = init_gtest()[5]
+    ct = init_gtest()[4]
 
     test = nx.Graph()
     test.add_node(1, label='x')
@@ -263,7 +275,7 @@ def test_singleton_cover():
     test.nodes()[2]['label'] = 'x', 'y'
     test.add_edge(1, 2, label='e')
     test.add_edge(2, 3, label='e')
-    res = singleton_cover(test, 1, rewritten_graph)
+    res = ct.singleton_cover(test, 1, rewritten_graph)
 
     assert res[0]['x'] == 2
     assert res[0]['y'] == 2
@@ -276,10 +288,7 @@ def test_rows():
 
 
 def test_add_row():
-    gtest = init_gtest()[0]
     pattern = init_gtest()[1]
-    embeddings = init_gtest()[2]
-    rewritten_graph = init_gtest()[5]
     code_table = init_gtest()[4]
 
     row1 = CodeTableRow(pattern)
@@ -298,15 +307,15 @@ def test_add_row():
 
 def test_create_rewrite_edge():
     rewritten_graph = init_gtest()[5]
-
+    ct = init_gtest()[4]
     rewritten_graph.add_node(1, label='40')
     rewritten_graph.add_node(2, label='P1')
 
-    create_rewrite_edge(rewritten_graph, 2, 40, pattern_port=1)
+    ct.create_rewrite_edge(rewritten_graph, 2, 40, pattern_port=1)
     assert ((2, 1) in list(rewritten_graph.edges(2))) is True
     assert rewritten_graph[2][1]['label'] == 'v1'
 
-    create_rewrite_edge(rewritten_graph, 2, 41, pattern_port=2)
+    ct.create_rewrite_edge(rewritten_graph, 2, 41, pattern_port=2)
     assert (3 in rewritten_graph.nodes()) is True
     assert rewritten_graph.nodes[3]['label'] == '41'
     assert ((2, 3) in list(rewritten_graph.edges(2))) is True
@@ -315,8 +324,10 @@ def test_create_rewrite_edge():
 
 def test_create_vertex_singleton_node():
     rewritten_graph = init_gtest()[5]
+    ct = init_gtest()[4]
+
     rewritten_graph.add_node(1, label='40')
-    create_vertex_singleton_node(rewritten_graph, 'x', 40)
+    ct.create_vertex_singleton_node(rewritten_graph, 'x', 40)
     assert (2 in rewritten_graph.nodes()) is True
     assert ('is_Pattern' in rewritten_graph.nodes(data=True)[2]) is True
     assert rewritten_graph.nodes[2]['is_Pattern'] is True
@@ -328,8 +339,10 @@ def test_create_vertex_singleton_node():
 
 def test_create_edge_singleton_node():
     rewritten_graph = init_gtest()[5]
+    ct = init_gtest()[4]
+
     rewritten_graph.add_node(1, label='40')
-    create_edge_singleton_node(rewritten_graph, 'a', 40, 41)
+    ct.create_edge_singleton_node(rewritten_graph, 'a', 40, 41)
     assert rewritten_graph.nodes[2]['is_Pattern'] is True
     assert rewritten_graph.nodes[2]['is_singleton'] is True
     assert rewritten_graph.nodes[3]['label'] == '41'
@@ -340,8 +353,10 @@ def test_create_edge_singleton_node():
 
 def test_create_pattern_node():
     rewritten_graph = init_gtest()[5]
+    ct = init_gtest()[4]
+
     rewritten_graph.add_node(1, label='40')
-    create_pattern_node(rewritten_graph, 1, [(40, 1)])
+    ct.create_pattern_node(rewritten_graph, 1, [(40, 1)])
     assert rewritten_graph.nodes[2]['is_Pattern'] is True
     assert ('is_singleton' in rewritten_graph.nodes(data=True)[2]) is False
     assert rewritten_graph.nodes[2]['label'] == 'P1'
@@ -451,7 +466,7 @@ def test_cover():
     ct.add_row(res['row6'])
     ct.cover()
 
-    print(ct.display_ct())
+    # print(ct.display_ct())
 
 
 def test_compute_ct_description_length():
@@ -515,8 +530,8 @@ def test_rewritten_graph():
     print('\n pattern infos :', utils.get_pattern_node_infos(ct.rewritten_graph()))
     # assert len(utils.get_pattern_node_infos(ct.rewritten_graph())['P0']) == 5
     print('\n port infos :', utils.get_port_node_infos(ct.rewritten_graph()))
-    can = utils.get_candidates(ct.rewritten_graph(), ct)
-    print(can)
+    # can = utils.get_candidates(ct.rewritten_graph(), ct)
+    # print(can)
 
 
 def test_compute_rewritten_graph_description():

@@ -6,6 +6,15 @@ class CodeTableRow:
     """
         Object to represent a row of the code table
         Its concerns only non-singleton pattern
+
+        Parameters
+        ----------
+        pattern
+            It's the row pattern structure
+        pattern_usage:int ,default=None
+            It's the row usage after a cover
+        pattern_port_usage: dict ,default=None
+            This is the usage of each port of the line pattern after the cover.
     """
 
     def __init__(self, pattern, pattern_usage=None, pattern_port_usage=None):
@@ -152,6 +161,11 @@ class CodeTableRow:
         return self._description_length
 
     def display_row(self):
+        """ Display a row in a certain format
+        Returns
+        -------
+        list
+        """
         return [utils.draw_pattern(self._pattern), self._pattern_usage, self._code_length, len(self._pattern_port_usage),
                 self._pattern_port_usage, self._port_code_length]
 

@@ -29,5 +29,18 @@ def test_fit():
     mdl = GraphMDL()
     mdl.fit(g)
     # mdl.summary()
-    assert mdl.description_length != 0.0
-    # assert len(mdl.patterns) != 0
+    assert mdl.description_length() != 0.0
+
+    assert GraphMDL().fit(g, timeout=0.01).description_length() !=0
+
+
+def test_patterns():
+    assert len(GraphMDL().fit(g).patterns()) == 3
+
+
+def test_description_length():
+    assert pytest.approx(GraphMDL().fit(g).description_length(), rel=1e-01) == 144.8
+
+
+def test_initial_description_length():
+    assert pytest.approx(GraphMDL().fit(g).initial_description_length(), rel=1e-01) == 256.3
