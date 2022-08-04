@@ -333,9 +333,19 @@ class CodeTable:
             raise ValueError("The label should be a data graph label")
 
     def singleton_code_length(self):
+        """ Provide the current singleton pattern code length
+        Returns
+        --------
+        dict
+        """
         return self._singleton_code_length
 
     def display_ct(self):
+        """ Display the code table in a dataframe format
+        Returns
+        -------
+        object
+        """
         data = [row.display_row() for row in self._rows if row.pattern_usage() != 0]
         for u, v in self._singleton_code_length.items():
             data.append([u, v, '', '', '', ''])

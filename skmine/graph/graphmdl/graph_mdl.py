@@ -9,6 +9,7 @@ from skmine.graph.graphmdl import utils
 
 
 def _order_pruning_rows(row):
+    """ Sort the pruning row by their usage"""
     return row.pattern_usage()
 
 
@@ -30,6 +31,10 @@ class GraphMDL(BaseMiner):
 
         References
         ----------
+        Francesco Bariatti. GraphMDL+ - PHD. PhD thesis
+        Francesco Bariatti, Peggy Cellier, and Sébastien Ferré. GraphMDL+ : interleaving
+            the generation and MDL-based selection of graph patterns. In Proceedings of the
+            36th Annual ACM Symposium on Applied Computing
 
 
     """
@@ -85,25 +90,12 @@ class GraphMDL(BaseMiner):
         else:
             self._data = D
             self._init_graph_mdl()
-            """if 'iterations' in kwargs.keys() and 'timeout' in kwargs.keys():
-                pass
-            elif 'iterations' in kwargs.keys():
-                self._init_graph_mdl()
-                self._fit(iterations=kwargs['iterations'])"""
             if self._timeout != 0:
                 self._anytime_graph_mdl_with_timeout(self._timeout)
                 return self
             else:
                 self._graph_mdl()
                 return self
-
-            # self._graph_mdl_end()
-
-    """def _fit(self, iterations=None):
-        if iterations is not None:
-            self._anytime_graph_mdl_with_iterations(iterations)
-        else:
-            self._graph_mdl()"""
 
     def _graph_mdl(self):
         """ Non-anytime graphmdl+ algorithm
@@ -122,29 +114,20 @@ class GraphMDL(BaseMiner):
             utils.MyLogger().info("GraphMDL+ best Ct search start .....")
             if len(candidates) != 0:
                 b = time.time()
-                # last_description_length = self._description_length
                 for candidate in candidates:
                     if candidate not in self._already_test:
                         # Add a candidate to a ct, cover and compute description length
-                        # temp_ct = copy.deepcopy(self._code_table)
                         self._compute_old_usage()
                         row = CodeTableRow(candidate.final_pattern())
-                        # temp_ct.add_row(row)
-                        # temp_ct.cover(debug=self._debug)
                         self._code_table.add_row(row)
                         self._code_table.cover(debug=self._debug)
-                        # temp_code_length = temp_ct.compute_description_length()
                         temp_code_length = self._code_table.compute_description_length()
                         self._already_test.append(candidate)
                         # if the new ct is better than the old, break and generate new candidates
                         # with the new ct
                         if temp_code_length < self._description_length:
-                            # self._code_table = temp_ct
-                            # self._rewritten_graph = temp_ct.rewritten_graph()
                             self._rewritten_graph = self._code_table.rewritten_graph()
                             self._description_length = temp_code_length
-                            # self._code_table = temp_ct
-                            # print("\n New CT", self._code_table)
                             utils.MyLogger().info("GraphMDL+ new ct found.....")
                             utils.MyLogger().info(f"New description length = {self._description_length}")
                             utils.MyLogger().info(f"New pattern added : {utils.display_graph(row.pattern())}")
@@ -162,13 +145,9 @@ class GraphMDL(BaseMiner):
                             stop = self._graph_mdl_end()
                             break
                         else:
-                            # if the candidate not improve the result, remove it to the code table
-                            # temp_ct.remove_row(row)
                             self._code_table.remove_row(row)
                     else:
                         utils.MyLogger().debug("Already test")
-                # print("\n None best code table found")
-                # self.anytime_graph_mdl(1)
             else:
                 stop = self._graph_mdl_end()
 
@@ -205,7 +184,6 @@ class GraphMDL(BaseMiner):
                         current = time.time() - begin
                         if self._stop_by_time(current, timeout):
                             break
-                        # temp_ct = copy.deepcopy(self._code_table)
                         self._compute_old_usage()
                         row = CodeTableRow(candidate.final_pattern())
                         self._code_table.add_row(row)
@@ -215,10 +193,8 @@ class GraphMDL(BaseMiner):
                         # if the new ct is better than the old, break and generate new candidates
                         # with the new ct
                         if temp_code_length < self._description_length:
-                            # self._code_table = temp_ct
                             self._rewritten_graph = self._code_table.rewritten_graph()
                             self._description_length = temp_code_length
-                            # self._code_table = temp_ct
                             utils.MyLogger().info("New DL ", self._description_length)
                             utils.MyLogger().info(f"new pattern added: {utils.display_graph(row.pattern())}")
                             utils.MyLogger().info(f"search time = {time.time() - b}")
@@ -275,59 +251,6 @@ class GraphMDL(BaseMiner):
 
         return True
 
-    """def _anytime_graph_mdl_with_iterations(self, iterations):
-            # Anytime graph mdl with iterations number
-        i = 0
-        while i <= iterations - 1:
-            utils.MyLogger().info("Candidate generation and sort start .....")
-            b = time.time()
-            candidates = utils.generate_candidates(self._rewritten_graph, self._code_table)
-            candidates.sort(reverse=True, key=self._order_candidates)  # sort the candidates list
-            utils.MyLogger().info(f"Candidate generation and sort end ..........time ={time.time() - b}")
-            utils.MyLogger().info(f"candidates number =  {len(candidates)}")
-            utils.MyLogger().info("GraphMDL best Ct search start .....")
-            if len(candidates) != 0:
-                b = time.time()
-                for candidate in candidates:
-                    if candidate not in self._already_test:
-                        # Add a candidate to a ct, cover and compute description length
-                        d = time.time()
-                        temp_ct = copy.deepcopy(self._code_table)
-                        print(f"deep copy time {time.time() - d}")
-                        self._compute_old_usage()
-                        row = CodeTableRow(candidate.final_pattern())
-                        temp_ct.add_row(row)
-                        temp_ct.cover()
-                        temp_code_length = temp_ct.compute_description_length()
-                        self._already_test.append(candidate)
-                        # if the new ct is better than the old, break and generate new candidates
-                        # with the new ct
-                        if temp_code_length < self._description_length:
-                            self._rewritten_graph = temp_ct.rewritten_graph()
-                            self._description_length = temp_code_length
-                            self._code_table = temp_ct
-                            # print("\n New CT", self._code_table)
-                            utils.MyLogger().info("New DL ", self._description_length)
-                            utils.MyLogger().info("new pattern added:{ utils.display_graph(row.pattern())}")
-                            utils.MyLogger().info(f"search time = {time.time() - b}")
-                            self._compute_pruning_candidates()
-                            self._pruning()
-                            break
-                        elif temp_code_length > self._description_length \
-                                and candidates.index(candidate) == len(candidates) - 1:
-                            self._graph_mdl_end()
-                            i = iterations - 1
-                            break
-                        else:
-                            # if the candidate not improve the result, remove it to the code table
-                            temp_ct.remove_row(row)
-                    else:
-                        utils.MyLogger().debug("Already test")
-            else:
-                self._graph_mdl_end()
-            i += 1
-        # self._graph_mdl_end()"""
-
     def _order_candidates(self, candidate):
         """Provide the candidate elements to order candidates
         Parameters
@@ -360,12 +283,10 @@ class GraphMDL(BaseMiner):
             because without them the code table is better """
         utils.MyLogger().info(f"Pruning start ....")
         self._compute_old_usage()  # compute old pattern usage
-        # temp_ct = copy.deepcopy(self._code_table)
         self._pruning_rows.sort(key=_order_pruning_rows)  # sort the pruning rows
         for r in self._pruning_rows:
             self._code_table.remove_row(r)
             self._code_table.cover()
-            # temp_ct.remove_row(r)
             if self._code_table.compute_description_length() < self._description_length:
                 self._rewritten_graph = self._code_table.rewritten_graph()
                 self._description_length = self._code_table.compute_description_length()
@@ -397,9 +318,19 @@ class GraphMDL(BaseMiner):
             print("Fit The algorithm firstly")
 
     def description_length(self):
+        """ Provide the description length
+        Returns
+        --------
+        float
+        """
         return self._description_length
 
     def initial_description_length(self):
+        """ Provide the initial description length
+        Returns
+        -------
+        float
+        """
         return self._initial_description_length
 
     def discover(self, *args, **kwargs):
