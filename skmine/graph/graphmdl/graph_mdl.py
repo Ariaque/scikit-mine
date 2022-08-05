@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+import networkx
 from skmine.base import BaseMiner
 from skmine.graph.graphmdl.label_codes import LabelCodes
 from skmine.graph.graphmdl.code_table import CodeTable
@@ -65,7 +66,7 @@ class GraphMDL(BaseMiner):
         # CT0 cover
         self._code_table.cover(debug=self._debug)
         self._rewritten_graph = self._code_table.rewritten_graph()
-        self._description_length = self._code_table.compute_description_length()
+        self._description_length = self._code_table.compute_total_description_length()
         self._initial_description_length = self._description_length
         utils.MyLogger().info(f"\n initial CT \n {self._code_table}")
         utils.MyLogger().info("GraphMDL+ run ...")
@@ -121,7 +122,7 @@ class GraphMDL(BaseMiner):
                         row = CodeTableRow(candidate.final_pattern())
                         self._code_table.add_row(row)
                         self._code_table.cover(debug=self._debug)
-                        temp_code_length = self._code_table.compute_description_length()
+                        temp_code_length = self._code_table.compute_total_description_length()
                         self._already_test.append(candidate)
                         # if the new ct is better than the old, break and generate new candidates
                         # with the new ct
@@ -188,7 +189,7 @@ class GraphMDL(BaseMiner):
                         row = CodeTableRow(candidate.final_pattern())
                         self._code_table.add_row(row)
                         self._code_table.cover()
-                        temp_code_length = self._code_table.compute_description_length()
+                        temp_code_length = self._code_table.compute_total_description_length()
                         self._already_test.append(candidate)
                         # if the new ct is better than the old, break and generate new candidates
                         # with the new ct
@@ -245,7 +246,7 @@ class GraphMDL(BaseMiner):
         utils.MyLogger().info("GraphMDL+ end .....")
         self._code_table.cover(debug=self._debug)
         self._rewritten_graph = self._code_table.rewritten_graph()
-        self._description_length = self._code_table.compute_description_length()
+        self._description_length = self._code_table.compute_total_description_length()
         utils.MyLogger().info(f"Final description length = {round(self._description_length, 2)}")
         utils.MyLogger().info(f"Number of patterns found = {len(self.patterns())}")
 
@@ -287,9 +288,9 @@ class GraphMDL(BaseMiner):
         for r in self._pruning_rows:
             self._code_table.remove_row(r)
             self._code_table.cover()
-            if self._code_table.compute_description_length() < self._description_length:
+            if self._code_table.compute_total_description_length() < self._description_length:
                 self._rewritten_graph = self._code_table.rewritten_graph()
-                self._description_length = self._code_table.compute_description_length()
+                self._description_length = self._code_table.compute_total_description_length()
                 self._compute_pruning_candidates()  # recompute the pruning candidates
                 self._pruning()
             else:
@@ -347,3 +348,18 @@ class GraphMDL(BaseMiner):
                     print("\n", s)
         else:
             print("Fit the graphmdl+ algorithm firstly")
+
+    def _code_table_row_to_json(self):
+        pass
+
+    def to_json(self):
+        res = dict()
+        # Add the description lengths ( that of the total, the code table and the rewritten graph)
+        res["description_lengths"] = {"total": self._description_length,
+                                      "data": self._code_table.compute_rewritten_graph_description(),
+                                      "model": self._code_table.description_length()}
+
+        res["edge_standard_table"] = self._label_codes.edges_lc()
+        res["kind"] = "simple_directed"
+        # res["patterns"] =
+        res["vertex_standard_table"] = self._label_codes.vertex_lc()

@@ -38,6 +38,7 @@ class CodeTable:
         """
         self._vertex_singleton_usage = dict()  # singleton vertex usage
         self._edge_singleton_usage = dict()  # singleton edge usage
+        self._singleton_used_embeddings = dict()  # singleton used embedding
         self._singleton_code_length = dict()  # singleton pattern code length
         self._rewritten_graph = nx.DiGraph()  # A directed graph who represents the rewritten graph
 
@@ -99,7 +100,7 @@ class CodeTable:
 
         self._vertex_singleton_usage = res[0]  # Store vertex singleton usage
         self._edge_singleton_usage = res[1]  # Store edge singleton usage
-
+        self._singleton_used_embeddings = res[2]  # store the used embeddings
         usage_sum = self._compute_usage_sum()  # Get the total of the rows usage
         # compute each row code length and description length
         for row in self._rows:
@@ -109,7 +110,7 @@ class CodeTable:
         self._compute_singleton_code(usage_sum)  # compute singleton code length
         utils.MyLogger().info(f"cover time...{time.time() - b}")
 
-    def compute_description_length(self):
+    def compute_total_description_length(self):
         """ Compute the total description length
         Returns
         -------
@@ -567,7 +568,7 @@ class CodeTable:
         pattern
         Returns
         -------
-        tuple
+        list
         """
         res = []
         # Search pattern ports
@@ -707,7 +708,6 @@ class CodeTable:
         cover_marker
         rewritten_graph
         row_number
-        timeout
         """
         cover_usage = 0
         port_usage = dict()
@@ -716,6 +716,7 @@ class CodeTable:
                 if not self.is_embedding_marked(embedding, row.pattern(), graph, cover_marker):
                     self.mark_embedding(embedding, graph, row.pattern(), cover_marker)
                     ports = self.search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
+                    row.add_used_embeddings((embedding, ports))
                     cover_usage = cover_usage + 1
                     # create the pattern in the rewritten graph
                     self.create_pattern_node(rewritten_graph, row_number, ports)
@@ -730,7 +731,9 @@ class CodeTable:
                     if not self.is_node_labels_marked(keys[i], graph, cover_marker, label):
                         ports = self.search_port(graph, embedding, cover_marker, row.pattern(), port_usage)
                         cover_usage = cover_usage + 1
+                        # The embedding marking consist of the node label marking
                         self.mark_node(keys[i], graph, cover_marker, label)
+                        row.add_used_embeddings((embedding, ports))
                         # create the pattern in the rewritten graph
                         self.create_pattern_node(rewritten_graph, row_number,
                                                  ports)  # with experimental rewritten graph implementation
@@ -753,7 +756,7 @@ class CodeTable:
         """
         edge_singleton_usage = defaultdict(int)
         vertex_singleton_usage = defaultdict(int)
-
+        singleton_used_embeddings = defaultdict(lambda: [])
         # for edge label
         for edge in graph.edges(data=True):
             if not self.is_edge_marked(edge[0], edge[1], graph, cover_marker, edge[2]['label']):
@@ -762,7 +765,9 @@ class CodeTable:
                 # Mark the edge nodes as data port
                 graph.nodes[edge[0]]['port'] = True
                 graph.nodes[edge[1]]['port'] = True
-
+                singleton_used_embeddings[edge[2]['label']].append(({edge[0]: 1,
+                                                                     edge[1]: 2},
+                                                                    [(edge[0], 1), (edge[1], 2)]))
                 # create the singleton embedding in the rewritten graph
                 self.create_edge_singleton_node(rewritten_graph, edge[2]['label'], edge[0], edge[1])
         # for node label
@@ -774,6 +779,9 @@ class CodeTable:
                             vertex_singleton_usage[label] += 1
                             self.mark_node(node[0], graph, cover_marker, label)
                             graph.nodes[node[0]]['port'] = True  # mark the node as port
+                            singleton_used_embeddings[label].append(({node[0]: 1}, [node[0], 1]))  # store the
+                            # singleton used embedding
+
                             # create the singleton embedding in the rewritten graph
                             self.create_vertex_singleton_node(rewritten_graph, label, node[0])
                 else:
@@ -784,7 +792,61 @@ class CodeTable:
                         # create the singleton embedding in the rewritten graph
                         self.create_vertex_singleton_node(rewritten_graph, node[1]['label'], node[0])
 
-        return vertex_singleton_usage, edge_singleton_usage
+        return vertex_singleton_usage, edge_singleton_usage, singleton_used_embeddings
+
+    def to_json(self):
+        res = [row.to_json() for row in self._rows if row.pattern_usage() != 0]
+        vertex_singleton = [{"singleton": True,
+                             "st_length": self._standard_table.encode_singleton_vertex(singleton),
+                             "embeddings": [embedding.keys()
+                                            for embedding in
+                                            utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
+                                                                 self._data_graph)],
+                             "code_length": self._singleton_code_length[singleton],
+                             "used_embeddings": [{
+                                 "mapping": embedding[0].keys(),
+                                 "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
+                             } for embedding in self._singleton_used_embeddings[singleton]],
+                             "usage": usage,
+                             "ports": {"0": {"code_length": 0, "usage": 1}},
+                             "structure": {
+                                 "vertices": [[str(singleton)]],
+                                 "edges": [],
+                                 "canonical_certificate": {
+                                     "elements": [{"vertex": 0, "label": singleton, "type": "vertex_label"}],
+                                     "vertex_count": 1
+                                 },
+                                 "automorphisms": [[0]]
+                             }} for singleton, usage in self._vertex_singleton_usage.items()]
+
+        edge_singleton = [{
+            "singleton": True,
+            "st_length": self._standard_table.encode_singleton_edge(singleton),
+            "embeddings": [embedding.keys()
+                           for embedding in
+                           utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
+                                                self._data_graph)],
+            "code_length": self._singleton_code_length[singleton],
+            "used_embeddings": [{
+                "mapping": embedding[0].keys(),
+                "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
+            } for embedding in self._singleton_used_embeddings[singleton]],
+            "usage": usage,
+            "ports": {"0": {"code_length": 0, "usage": 1}, "1": {"code_length": 0, "usage": 1}},
+            "structure": {
+                "vertices": [],
+                "edges": [{"source": 0, "label": singleton, "target": 1}],
+                "canonical_certificate": {
+                    "elements": [
+                        {"vertex": 0, "label": "", "type": "vertex_label"},
+                        {"vertex": 1, "label": "", "type": "vertex_label"},
+                        {"source": 0, "label": singleton, "type": "edge", "target": 1}
+                    ],
+                    "vertex_count": 2
+                },
+                "automorphisms": [[0, 1], [1, 0]]
+            }
+        } for singleton, usage in self._edge_singleton_usage.items()]
 
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"

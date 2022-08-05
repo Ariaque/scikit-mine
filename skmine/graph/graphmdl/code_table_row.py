@@ -25,6 +25,7 @@ class CodeTableRow:
         self._code_length = 0.0
         self._port_code_length = None  # the pattern ports code
         self._description_length = 0.0
+        self._used_embeddings = []  # used embeddings
 
     def code_length(self):
         """ Provide the row code length
@@ -89,6 +90,12 @@ class CodeTableRow:
         embeddings
         """
         self._embeddings = embeddings
+
+    def add_used_embeddings(self, embedding):
+        self._used_embeddings.append(embedding)
+
+    def used_embeddings(self):
+        return self._used_embeddings
 
     def embeddings(self):
         """ Provide the pattern row embeddings
@@ -166,8 +173,41 @@ class CodeTableRow:
         -------
         list
         """
-        return [utils.draw_pattern(self._pattern), self._pattern_usage, self._code_length, len(self._pattern_port_usage),
+        return [utils.draw_pattern(self._pattern), self._pattern_usage, self._code_length,
+                len(self._pattern_port_usage),
                 self._pattern_port_usage, self._port_code_length]
+
+    def to_json(self):
+        """ Encode the code table row to json format
+        Returns
+        -------
+        dict
+        """
+        res = dict()
+        res["singleton"] = False
+        res['st_length'] = self._description_length
+        res["embeddings"] = [embedding.keys() for embedding in self._embeddings]
+        res["code_length"] = self._code_length
+        res["used_embeddings"] = [{
+            "mapping": embedding[0].keys(),
+            "ports": {str(p[1]):p[0] for p in embedding[1]}
+        } for embedding in self._used_embeddings]
+        res["usage"] = self._pattern_usage
+        res["ports"] = self._port_to_json()
+        res["structure"] = utils.graph_to_json(self._pattern)
+        return res
+
+    def _port_to_json(self):
+        """ Provide a json format of the row ports
+        Returns
+        -------
+        dict
+        """
+        res = dict()
+        for p in self._pattern_port_usage:
+            res[str(p[0])] = {"code_length": self._port_code_length[p[0]],
+                              "usage": p[1]}
+        return res
 
     def __str__(self):
         return "{} | {} |{} |{} |{} |{}" \

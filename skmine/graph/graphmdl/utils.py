@@ -271,8 +271,16 @@ def _node_match(node1, node2):
     """
     if 'label' in node1 and 'label' in node2:
         res = list()
-        for i in node2['label']:
-            res.append(i in node1['label'])
+        if type(node1['label']) is str and type(node2['label']) is str:
+            res.append(node1['label'] == node2['label'])
+        elif type(node1['label']) is not str and type(node2['label']) is str:
+            res.append(node2['label'] in node1['label'])
+        elif type(node1['label']) is not str and type(node2['label']) is not str:
+            for i in node2['label']:
+                res.append(i in node1['label'])
+        else:
+            res.append(False)
+
         return not (False in res)
     elif 'label' not in node1 and 'label' in node2:
         return False
@@ -679,12 +687,13 @@ def get_automorphisms(graph):
     else:
         graph_matcher = iso.GraphMatcher(graph, graph, **opt)
 
-    automorphisms = set()
+    """automorphisms = set()
     for auto in list(graph_matcher.isomorphisms_iter())[1:]:
         for i, j in auto.items():
             if i != j:
-                automorphisms.add((i, j))
-    return automorphisms
+                automorphisms.add((i, j))"""
+
+    return list(graph_matcher.isomorphisms_iter())
 
 
 def get_port_candidates(patterns_list):
@@ -1178,6 +1187,29 @@ def get_graph_from_file(file):
             graph.add_edge(int(line[1]) + 1, int(line[2]) + 1, label=line[3].split('\n')[0])
     file.close()
     return graph
+
+
+def graph_to_json(graph: Graph):
+    """ Encode graph to json
+    Parameters
+    ----------
+    graph
+    Returns
+    --------
+    dict
+    """
+    res = dict()
+    res["vertices"] = [[j] for j in dict(graph.nodes(data='label')).values()]
+    res["edges"] = [{"source": u, "label": d['label'], "target": v} for u, v, d in graph.edges(data=True)]
+    res["canonical_certificate"] = {
+        "elements": [{"vertex": u, "label": v['label'], "type": "vertex_label"} for u, v in
+                     graph.nodes(data=True)].extend(
+            [{"source": u, "label": d['label'], "type": "edge", "target": v} for u, v, d in graph.edges(data=True)]
+        ),
+        "vertex_count": len(graph.nodes())
+    }
+    res["automorphisms"]: [automorphism.keys() for automorphism in get_automorphisms(graph)]
+    return res
 
 
 class MyLogger:
