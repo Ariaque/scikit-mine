@@ -958,10 +958,10 @@ class CodeTable:
                                             utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
                                                                  self._data_graph)],
                              "code_length": self._singleton_code_length[singleton],
-                             "used_embeddings": [{
+                          """   "used_embeddings": [{
                                  "mapping": embedding[0].keys(),
                                  "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
-                             } for embedding in self._singleton_used_embeddings[singleton]],
+                             } for embedding in self._singleton_used_embeddings[singleton]],"""
                              "usage": usage,
                              "ports": {"0": {"code_length": 0, "usage": 1}},
                              "structure": {
@@ -982,10 +982,10 @@ class CodeTable:
                            utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
                                                 self._data_graph)],
             "code_length": self._singleton_code_length[singleton],
-            "used_embeddings": [{
+           """ "used_embeddings": [{
                 "mapping": embedding[0].keys(),
                 "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
-            } for embedding in self._singleton_used_embeddings[singleton]],
+            } for embedding in self._singleton_used_embeddings[singleton]],"""
             "usage": usage,
             "ports": {"0": {"code_length": 0, "usage": 1}, "1": {"code_length": 0, "usage": 1}},
             "structure": {

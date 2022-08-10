@@ -229,7 +229,7 @@ class CodeTableRow:
         dict
         """
         res = dict()
-        for p in self._pattern_port_usage:
+        for p in self._pattern_port_usage.items():
             res[str(p[0])] = {"code_length": self._port_code_length[p[0]],
                               "usage": p[1]}
         return res

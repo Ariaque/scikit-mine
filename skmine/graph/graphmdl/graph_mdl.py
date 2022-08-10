@@ -357,11 +357,11 @@ class GraphMDL(BaseMiner):
         res = dict()
         # Add the description lengths ( that of the total, the code table and the rewritten graph)
         res["description_lengths"] = {"total": self._description_length,
-                                      "data": self._code_table.compute_rewritten_graph_description(),
+                                      "data": self._code_table.compute_kgmdl_total_description_length(),
                                       "model": self._code_table.description_length()}
 
         res["edge_standard_table"] = self._label_codes.edges_lc()
         res["kind"] = "simple_directed"
-        res["patterns"] = [].extend(self._code_table.to_json())
+        res["patterns"] = self._code_table.to_json()
         res["vertex_standard_table"] = self._label_codes.vertex_lc()
-
+        return res

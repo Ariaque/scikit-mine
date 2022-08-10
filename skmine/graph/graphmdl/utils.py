@@ -1236,14 +1236,21 @@ def graph_to_json(graph: Graph):
     --------
     dict
     """
+    nodes = []
+    vertices = []
+    for u, v in graph.nodes(data=True):
+        if 'label' in v:
+            nodes.append({"vertex": u, "label": v['label'], "type": "vertex_label"})
+            vertices.append([v['label']])
+        else:
+            nodes.append({"vertex": u, "label": "", "type": "vertex_label"})
+            vertices.append([''])
     res = dict()
-    res["vertices"] = [[j] for j in dict(graph.nodes(data='label')).values()]
+    res["vertices"] = vertices
     res["edges"] = [{"source": u, "label": d['label'], "target": v} for u, v, d in graph.edges(data=True)]
     res["canonical_certificate"] = {
-        "elements": [{"vertex": u, "label": v['label'], "type": "vertex_label"} for u, v in
-                     graph.nodes(data=True)].extend(
-            [{"source": u, "label": d['label'], "type": "edge", "target": v} for u, v, d in graph.edges(data=True)]
-        ),
+        "elements": nodes.extend([{"source": u, "label": d['label'], "type": "edge", "target": v}
+                                  for u, v, d in graph.edges(data=True)]),
         "vertex_count": len(graph.nodes())
     }
     res["automorphisms"]: [automorphism.keys() for automorphism in get_automorphisms(graph)]
