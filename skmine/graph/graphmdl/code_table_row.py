@@ -146,7 +146,7 @@ class CodeTableRow:
 
         if self._pattern_port_usage is None or self._port_code_length is None:
             raise ValueError("Row's codes should be compute")
-
+        self._description_length = 0.0
         code_port_total = 0.0
         for value in self._port_code_length.values():
             code_port_total += value
@@ -156,6 +156,31 @@ class CodeTableRow:
         port_desc += code_port_total
 
         self._description_length = self._code_length  # usage description
+        self._description_length += utils.encode(self._pattern, standard_table)  # structure description
+        self._description_length += port_desc  # ports description
+
+    def kgmdl_compute_description_length(self, standard_table):
+        """ Compute the row  description length according kgmdl equation
+        Parameters
+        ---------
+        standard_table
+        """
+        if self._pattern_usage is None:
+            self._description_length = 0.0
+
+        if self._pattern_port_usage is None or self._port_code_length is None:
+            raise ValueError("Row's codes should be compute")
+        self._description_length = 0.0
+
+        code_port_total = 0.0
+        for value in self._port_code_length.values():
+            code_port_total += value
+
+        port_desc = math.log2(len(self._pattern.nodes()) + 1)
+        port_desc += math.log2(utils.binomial(len(self._pattern.nodes()), len(self._port_code_length)))
+        # port_desc += code_port_total
+
+        # self._description_length = self._code_length  # usage description
         self._description_length += utils.encode(self._pattern, standard_table)  # structure description
         self._description_length += port_desc  # ports description
 

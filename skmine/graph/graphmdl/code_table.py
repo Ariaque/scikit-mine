@@ -62,7 +62,8 @@ class CodeTable:
         ---------
         row
         """
-        del self._rows[self.rows().index(row)]
+        # del self._rows[self.rows().index(row)]
+        self._rows.remove(row)
         self._rows.sort(reverse=True, key=self._order_rows)
 
     def rows(self):
@@ -135,8 +136,35 @@ class CodeTable:
         else:
             raise ValueError("You should cover the code table before computing his description")
 
+    def compute_kgmdl_total_description_length(self):
+        """ Compute total description length according the prequential code equation
+        Returns
+        -------
+        double
+        """
+        self.compute_kgmdl_ct_description_length()
+
+        return self._description_length + self.compute_kgmdl_rewritten_graph_description()
+
+    def compute_kgmdl_ct_description_length(self):
+        """ Compute this code table description length
+            according kgmdl equation (with prequential code) """
+        if len(self._rewritten_graph.nodes()) != 0:  # Check if the cover is done
+            # check if the code table is already covered
+            description_length = 0.0
+            for row in self._rows:
+                if row.pattern_usage() != 0:
+                    row.kgmdl_compute_description_length(self._standard_table)
+                    description_length += row.description_length()
+
+            description_length += self.kgmdl_compute_singleton_description_length()
+
+            self._description_length = description_length
+        else:
+            raise ValueError("You should cover the code table before computing his description")
+
     def compute_rewritten_graph_description(self):
-        """ Compute _description_length of the rewritten graph
+        """Compute description length of the rewritten graph
         Returns
         -------
         float
@@ -152,7 +180,50 @@ class CodeTable:
                     desc += self._compute_embedding_singleton_description(node[1]['label'])
                 else:
                     desc += 0.0
+            return desc
+        else:
+            raise ValueError("You should first cover the code table")
 
+    def compute_kgmdl_rewritten_graph_description(self):
+        """ Compute _description_length of the rewritten graph,
+            according kgmdl equation
+        Returns
+        -------
+        float
+        """
+        if len(self._rewritten_graph.nodes()) != 0:
+            desc = 0.0
+            desc += utils.universal_integer_encoding_with0(
+                len([node for node in self._rewritten_graph.nodes(data=True)
+                     if 'is_Pattern' in node[1]]))  # embedding vertices
+            desc += math.log2(len([node for node in self._rewritten_graph.nodes(data=True)
+                                   if 'is_Pattern' not in node[1]]) + 1)  # port vertices count
+            # number of edges per vertex
+            edges_per_vertex_seq = [
+                row.pattern_usage() * math.log2(len(row.port_code_length().keys()) + 1)
+                for row in self._rows if row.pattern_usage() != 0]
+            edges_per_vertex_seq.extend([v * math.log2(1 + 1) for v in self._vertex_singleton_usage.values()])
+            edges_per_vertex_seq.extend((v * math.log2(2 + 1) for v in self._edge_singleton_usage.values()))
+            desc += sum(edges_per_vertex_seq)
+
+            # pattern of each vertex embedding sequence
+            pattern_embedding = [row.pattern_usage() for row in self._rows if row.pattern_usage() != 0]
+            pattern_embedding.extend([v for v in self._vertex_singleton_usage.values()])
+            pattern_embedding.extend((v for v in self._edge_singleton_usage.values()))
+            desc += utils.prequential_code(pattern_embedding)
+
+            # edges destination
+            desc += utils.prequential_code(
+                [len(self._rewritten_graph.in_edges(node[0]))
+                 for node in self._rewritten_graph.nodes(data=True)
+                 if 'is_Pattern' not in node[1]])
+
+            # edges labels
+            edges_label = [utils.prequential_code([v for v in row.pattern_port_usage().keys()])
+                           for row in self._rows if row.pattern_usage() != 0]
+            # the code for vertex pattern is zero
+            edges_label.extend([utils.prequential_code([v, v]) for v in self._edge_singleton_usage.values()])
+            desc += sum(edges_label)
             return desc
         else:
             raise ValueError("You should first cover the code table")
@@ -275,6 +346,32 @@ class CodeTable:
             for key in self._edge_singleton_usage.keys():
                 desc += utils.encode_singleton(self._standard_table, 2, key)
                 desc += self._singleton_code_length[key]
+                # port description, the singleton have two ports and two nodes
+                # Then we have 1 + len(nodes) = 3 and log2(binomial(2,2)), port code is {1:1, 2:1}
+                # Then sum = 2
+                desc += math.log2(3) + 2
+
+        return desc
+
+    def kgmdl_compute_singleton_description_length(self):
+        """ Compute the sum of each singleton pattern description length
+        Returns
+        -------
+        float
+        """
+        desc = 0.0
+        if len(self._vertex_singleton_usage.keys()) != 0:
+            for key in self._vertex_singleton_usage.keys():
+                desc += utils.encode_singleton(self._standard_table, 1, key)
+                # desc += self._singleton_code_length[key]
+                # port description, the singleton have one port and one node
+                # Then we have 1 + len(nodes) = 2 and log2(binomial(1,1)), port code is 0
+                desc += math.log2(2)
+
+        if len(self._edge_singleton_usage.keys()) != 0:
+            for key in self._edge_singleton_usage.keys():
+                desc += utils.encode_singleton(self._standard_table, 2, key)
+                # desc += self._singleton_code_length[key]
                 # port description, the singleton have two ports and two nodes
                 # Then we have 1 + len(nodes) = 3 and log2(binomial(2,2)), port code is {1:1, 2:1}
                 # Then sum = 2
@@ -432,6 +529,11 @@ class CodeTable:
         else:
             raise ValueError("label shouldn't be empty or none")
 
+    def _get_edge_index_from_label(self, values, label):
+        """ Provide the good edge index, it's used in the multigraph treatment"""
+        return [i for i, j in enumerate(values, start=0) if
+                'label' in j and j['label'] == label][0]
+
     def is_edge_marked(self, start, end, graph, cover_marker, label):
         """ Check if an edge is already marked
           Parameters
@@ -447,12 +549,25 @@ class CodeTable:
           bool
           """
         if start in graph.nodes() and end in graph.nodes() and \
-                graph[start][end] is not None and 'label' in graph[start][end]:
-            edge = graph[start][end]
-            return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][label] == cover_marker
-        else:
-            raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
-                             f"Also the edge should have a label ")
+                graph[start][end] is not None:
+            if type(graph) is nx.MultiDiGraph:
+                if not (False in ['label' in v
+                                  for v in graph.get_edge_data(start, end).values()]):
+                    edge_index = self._get_edge_index_from_label(graph.get_edge_data(start, end).values(), label)
+                    edge = graph[start][end][edge_index]
+                    return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][
+                        label] == cover_marker
+                else:
+                    raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
+                                     f"Also the edge should have a label ")
+            else:
+                if 'label' in graph[start][end]:
+                    edge = graph[start][end]
+                    return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][
+                        label] == cover_marker
+                else:
+                    raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
+                                     f"Also the edge should have a label ")
 
     def mark_edge(self, start, end, graph, cover_marker, label):
         """ Mark an edge in the graph by the cover marker
@@ -464,14 +579,26 @@ class CodeTable:
         cover_marker
         label
         """
-        if label is not None and label in graph[start][end]['label']:
-            if 'cover_mark' in graph[start][end]:
-                graph[start][end]['cover_mark'][label] = cover_marker
-            else:
-                graph[start][end]['cover_mark'] = {label: cover_marker}
+        if label is not None:
+            if type(graph) is nx.MultiDiGraph:
+                if not (False in ['label' in v
+                                  for v in graph.get_edge_data(start, end).values()]):
+                    edge_index = self._get_edge_index_from_label(graph.get_edge_data(start, end).values(), label)
+                    if 'cover_mark' in graph[start][end][edge_index]:
+                        graph[start][end][edge_index]['cover_mark'][label] = cover_marker
+                    else:
+                        graph[start][end][edge_index]['cover_mark'] = {label: cover_marker}
+                else:
+                    raise ValueError("label shouldn't be empty or none and must be an edge label ")
 
-        else:
-            raise ValueError("label shouldn't be empty or none and must be an edge label ")
+            else:
+                if label in graph[start][end]['label']:
+                    if 'cover_mark' in graph[start][end]:
+                        graph[start][end]['cover_mark'][label] = cover_marker
+                    else:
+                        graph[start][end]['cover_mark'] = {label: cover_marker}
+                else:
+                    raise ValueError("label shouldn't be empty or none and must be an edge label ")
 
     def is_embedding_marked(self, embedding, pattern, graph, cover_marker):
         """ Check if an embedding is already marked
@@ -496,15 +623,25 @@ class CodeTable:
                 node1 = utils.get_key_from_value(embedding, edge[0])
                 node2 = utils.get_key_from_value(embedding, edge[1])
                 if (node1, node2) in list(graph.edges(node1)):
-                    if ('cover_mark' in graph[node1][node2]
-                            and label in graph[node1][node2]['cover_mark']
-                            and self.is_edge_marked(node1, node2, graph, cover_marker, label)):
-                        res.append(True)
+                    if type(label) is str:
+                        if self.is_edge_marked(node1, node2, graph, cover_marker, label):
+                            res.append(True)
+                    elif type(label) is list:
+                        for l in label:
+                            if self.is_edge_marked(node1, node2, graph, cover_marker, l):
+                                res.append(True)
+                    else:
+                        raise ValueError("All edges must have a label")
                 elif (node2, node1) in list(graph.edges(node2)):
-                    if ('cover_mark' in graph[node2][node1]
-                            and label in graph[node2][node1]['cover_mark']
-                            and self.is_edge_marked(node2, node1, graph, cover_marker, label)):
-                        res.append(True)
+                    if type(label) is str:
+                        if self.is_edge_marked(node1, node2, graph, cover_marker, label):
+                            res.append(True)
+                    elif type(label) is list:
+                        for l in label:
+                            if self.is_edge_marked(node1, node2, graph, cover_marker, l):
+                                res.append(True)
+                    else:
+                        raise ValueError("All edges must have a label")
                 else:
                     res.append(False)
             return True in res
@@ -526,9 +663,21 @@ class CodeTable:
                 node1 = utils.get_key_from_value(embedding, edge[0])
                 node2 = utils.get_key_from_value(embedding, edge[1])
                 if (node1, node2) in list(graph.edges(node1)):
-                    self.mark_edge(node1, node2, graph, cover_marker, label)
+                    if type(label) is str:
+                        self.mark_edge(node1, node2, graph, cover_marker, label)
+                    elif type(label) is list:
+                        for l in label:
+                            self.mark_edge(node1, node2, graph, cover_marker, l)
+                    else:
+                        raise ValueError("All edges must have label")
                 elif (node2, node1) in list(graph.edges(node2)):
-                    self.mark_edge(node2, node1, graph, cover_marker, label)
+                    if type(label) is str:
+                        self.mark_edge(node1, node2, graph, cover_marker, label)
+                    elif type(label) is list:
+                        for l in label:
+                            self.mark_edge(node1, node2, graph, cover_marker, l)
+                    else:
+                        raise ValueError("All edges must have label")
 
                 if 'label' in pattern.nodes(data=True)[edge[0]]:
                     self.mark_node(node1, graph, cover_marker, pattern.nodes(data=True)[edge[0]]['label'])
@@ -605,7 +754,8 @@ class CodeTable:
         """
         if graph_node in graph.nodes() and pattern_node in pattern.nodes():
             if graph.edges(graph_node) is not None and pattern.edges(pattern_node) is not None:
-                return len(graph.edges(graph_node)) == len(pattern.edges(pattern_node))
+                return len(graph.in_edges(graph_node)) + len(graph.out_edges(graph_node)) \
+                       == len(pattern.in_edges(pattern_node)) + len(pattern.out_edges(pattern_node))
             else:
                 return True
         else:
@@ -626,8 +776,12 @@ class CodeTable:
         if node_number in graph.nodes():
             if 'label' in graph.nodes(data=True)[node_number]:
                 response = []
-                for label in graph.nodes(data=True)[node_number]['label']:
+                label = graph.nodes(data=True)[node_number]['label']
+                if type(label) is str:
                     response.append(self.is_node_marked(node_number, graph, cover_marker, label))
+                else:
+                    for l in label:
+                        response.append(self.is_node_marked(node_number, graph, cover_marker, l))
 
                 return not (False in response)
             else:
@@ -847,6 +1001,14 @@ class CodeTable:
                 "automorphisms": [[0, 1], [1, 0]]
             }
         } for singleton, usage in self._edge_singleton_usage.items()]
+
+    def data_is_multigraph(self):
+        """ Provide if the data graph is a multigraph or not
+        Returns
+        -------
+        bool
+        """
+        return type(self._data_graph) is nx.MultiDiGraph
 
     def __str__(self) -> str:
         msg = "\n Pattern |usage |code_length |port_count |port_usage |port_code \n"

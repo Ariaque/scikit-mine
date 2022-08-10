@@ -26,6 +26,29 @@ def log2(value, total):
     return -math.log2(value / total)
 
 
+def prequential_code(seq, epsilon=0.5):
+    """ Compute the prequential code for a given sequence according an special epsilon
+    Parameters
+    -----------
+    seq
+    epsilon
+    Returns
+    -------
+    float
+    """
+    code = 0.0
+    eps = epsilon
+    total_epsilon = len(seq) * epsilon
+    for value in seq:
+        for i in range(0, value):
+            code += log2(eps, total_epsilon)
+            total_epsilon += 1
+            eps += 1
+
+        eps = epsilon
+    return code
+
+
 def count_edge_label(graph: Graph):
     """ Count each edge label occurrence in a graph and store the result
     Parameters
@@ -322,11 +345,10 @@ def get_embeddings(pattern, graph):
     }
     graph_matcher = None
     # Create matcher according the graph type (directed or no)
-
-    if nx.is_directed(graph):
+    if type(graph) is nx.DiGraph:
         graph_matcher = iso.DiGraphMatcher(graph, pattern, **comp)
-    else:
-        graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
+    elif type(graph) is nx.MultiDiGraph:
+        graph_matcher = iso.MultiDiGraphMatcher(graph, pattern, **comp)
 
     return list(graph_matcher.subgraph_monomorphisms_iter())
 
@@ -451,14 +473,26 @@ def get_edge_label(start, end, graph):
     str
     """
     if start in graph.nodes() and end in graph.nodes():
-        if (start, end) in list(graph.edges(start)):
-            if 'label' in graph[start][end]:
-                return graph[start][end]['label']
-        elif (end, start) in list(graph.edges(end)):
-            if 'label' in graph[end][start]:
-                return graph[end][start]['label']
+        if type(graph) is nx.MultiDiGraph:
+            if (start, end) in list(graph.edges(start)):
+                if not (False in ['label' in v
+                                  for v in graph.get_edge_data(start, end).values()]):
+                    return [v['label'] for v in graph.get_edge_data(start, end).values()]
+            elif (end, start) in list(graph.edges(end)):
+                if not (False in ['label' in v
+                                  for v in graph.get_edge_data(end, start).values()]):
+                    return [v['label'] for v in graph.get_edge_data(end, start).values()]
+            else:
+                raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
         else:
-            raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
+            if (start, end) in list(graph.edges(start)):
+                if 'label' in graph[start][end]:
+                    return graph[start][end]['label']
+            elif (end, start) in list(graph.edges(end)):
+                if 'label' in graph[end][start]:
+                    return graph[end][start]['label']
+            else:
+                raise ValueError(f"{start}-{end} should be a graph edge and should have a label")
     else:
         raise ValueError(f"{start} and {end} should be a graph nodes")
 
@@ -1016,7 +1050,11 @@ def create_singleton_pattern(label, code_table):
     -------
     Graph
     """
-    pattern = nx.DiGraph()
+    if code_table.data_is_multigraph():
+        pattern = nx.MultiDiGraph()
+    else:
+        pattern = nx.DiGraph()
+
     if code_table.is_ct_edge_singleton(label):
         pattern.add_nodes_from(range(1, 3))
         pattern.add_edge(1, 2, label=label)

@@ -144,6 +144,89 @@ def init_graph_to_utils_test():
     return res
 
 
+def init_multi_graph():
+    graph = nx.MultiDiGraph()
+    graph.add_node(1, label="Book")
+    graph.add_node(2, label="Book")
+    graph.add_node(3, label="Book")
+    graph.add_node(4)
+    graph.nodes[4]['label'] = 'xsd:string', 'Value:Alice'
+    graph.add_node(5, label="Person")
+    graph.add_node(6, label="Person")
+    graph.add_node(7)
+    graph.nodes[7]['label'] = 'xsd:string', 'Value:Bob'
+    graph.add_node(8, label="City")
+    graph.add_node(9, label="City")
+    graph.add_node(10, label="Monument")
+    graph.add_node(11, label="Monument")
+    graph.add_node(12)
+    graph.add_node(13)
+    graph.nodes[12]['label'] = 'xsd:integer', 'Value:123'
+    graph.nodes[13]['label'] = 'xsd:integer', 'Value:123'
+    graph.add_edge(1, 5, label='author')
+    graph.add_edge(2, 5, label='author')
+    graph.add_edge(3, 5, label='author')
+    graph.add_edge(3, 6, label='author')
+    graph.add_edge(5, 4, label='name')
+    graph.add_edge(5, 8, label='born_in')
+    graph.add_edge(5, 8, label='died_in')
+    graph.add_edge(6, 7, label='name')
+    graph.add_edge(6, 9, label='born_in')
+    graph.add_edge(6, 9, label='died_in')
+    graph.add_edge(10, 8, label='is_located')
+    graph.add_edge(11, 8, label='is_located')
+    graph.add_edge(10, 12, label='height')
+    graph.add_edge(10, 11, label='near')
+    graph.add_edge(11, 10, label='near')
+    graph.add_edge(11, 13, label='height')
+    label_codes = LabelCodes(graph)
+    ct = CodeTable(label_codes, graph)
+    ct.cover()
+
+    p1 = nx.MultiDiGraph()
+    p1.add_node(1)
+    p1.add_node(2, label='Monument')
+    p1.add_node(3, label='Monument')
+    p1.add_node(4)
+    p1.add_node(5)
+    p1.nodes[4]['label'] = 'xsd:integer', 'Value:123'
+    p1.nodes[5]['label'] = 'xsd:integer', 'Value:123'
+    p1.add_edge(2, 1, label='is_located')
+    p1.add_edge(3, 1, label='is_located')
+    p1.add_edge(2, 4, label='height')
+    p1.add_edge(2, 3, label='near')
+    p1.add_edge(3, 2, label='near')
+    p1.add_edge(3, 5, label='height')
+    row1 = CodeTableRow(p1)
+
+    p2 = nx.MultiDiGraph()
+    p2.add_node(1)
+    p2.add_node(2, label='City')
+    p2.add_node(3, label='xsd:string')
+    p2.add_edge(1, 3, label='name')
+    p2.add_edge(1, 2, label='born_in')
+    p2.add_edge(1, 2, label='died_in')
+    row2 = CodeTableRow(p2)
+
+    p3 = nx.MultiDiGraph()
+    p3.add_node(1, label='Book')
+    p3.add_node(2, label='Person')
+    p3.add_edge(1, 2, label='author')
+    row3 = CodeTableRow(p3)
+    return {
+        'graph': graph, 'label_codes': label_codes, 'ct': ct,
+        'row1': row1, 'row2': row2, 'row3': row3}
+
+
+def test_prequential_code():
+    assert utils.prequential_code([0, 0]) == 0.0
+    assert utils.prequential_code([1, 0]) == 1.0
+    assert pytest.approx(utils.prequential_code([1, 1, 1, 1]), rel=1e-01) == 10.91
+    assert pytest.approx(utils.prequential_code([2, 2, 4]), rel=1e-01) == 15.15
+    assert pytest.approx(utils.prequential_code([10, 8, 0, 0, 0, 0, 0]), rel=1e-01) == 29.30
+    assert pytest.approx(utils.prequential_code([100, 500, 4, 10, 0]), rel=1e-01) == 515.90
+
+
 def test_count_edge_label():
     graph = init_graph_to_utils_test()['graph']
     assert len(utils.count_edge_label(graph).items()) == 2
@@ -1233,6 +1316,22 @@ def test_compute_rewritten_graph_description():
     ct.add_row(res['row6'])
     ct.cover()
     assert pytest.approx(ct.compute_rewritten_graph_description(), rel=1e-01) == 68.61
+
+
+def test_description_length_with_prequential_code():
+    res = init_multi_graph()
+    ct = res['ct']
+    ct.compute_kgmdl_ct_description_length()
+    assert pytest.approx(ct.description_length(), rel=1e-01) == 291.22
+    assert pytest.approx(ct.compute_kgmdl_rewritten_graph_description(), rel=1e-01) == 446.34
+    assert pytest.approx(ct.compute_kgmdl_rewritten_graph_description() + ct.description_length(), rel=1e-01) == 737.56
+    ct.add_row(res['row1'])
+    ct.add_row(res['row2'])
+    ct.add_row(res['row3'])
+    ct.cover()
+    ct.compute_kgmdl_ct_description_length()
+    assert pytest.approx(ct.description_length(), rel=1e-01) == 232.93
+    assert pytest.approx(ct.compute_kgmdl_rewritten_graph_description(), rel=1e-01) == 108.92
 
 
 def test_is_ct_edge_singleton():
