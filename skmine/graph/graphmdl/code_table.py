@@ -950,6 +950,7 @@ class CodeTable:
 
     def to_json(self):
         res = [row.to_json() for row in self._rows if row.pattern_usage() != 0]
+
         vertex_singleton = [{"singleton": True,
                              "st_length": self._standard_table.encode_singleton_vertex(singleton),
                              "embeddings": [embedding.keys()
@@ -1001,6 +1002,10 @@ class CodeTable:
                 "automorphisms": [[0, 1], [1, 0]]
             }
         } for singleton, usage in self._edge_singleton_usage.items()]
+
+        res.extend(vertex_singleton)
+        res.extend(edge_singleton)
+        return res
 
     def data_is_multigraph(self):
         """ Provide if the data graph is a multigraph or not

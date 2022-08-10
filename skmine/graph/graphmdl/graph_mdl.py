@@ -362,5 +362,6 @@ class GraphMDL(BaseMiner):
 
         res["edge_standard_table"] = self._label_codes.edges_lc()
         res["kind"] = "simple_directed"
-        # res["patterns"] =
+        res["patterns"] = [].extend(self._code_table.to_json())
         res["vertex_standard_table"] = self._label_codes.vertex_lc()
+
