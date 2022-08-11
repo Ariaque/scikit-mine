@@ -26,6 +26,7 @@ class CodeTableRow:
         self._port_code_length = None  # the pattern ports code
         self._description_length = 0.0
         self._used_embeddings = []  # used embeddings
+        self.arrival_number = None
 
     def code_length(self):
         """ Provide the row code length

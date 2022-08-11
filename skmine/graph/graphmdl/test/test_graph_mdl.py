@@ -793,7 +793,6 @@ def test_is_edge_marked():
     test.add_node(range(1, 3))
     test.add_edge(1, 2, label='e')
 
-
     assert ct.is_edge_marked(1, 2, test, 1, 'e') is False
     test[1][2]['cover_mark'] = {'e': 1}
     assert ct.is_edge_marked(1, 2, test, 1, 'e') is True
@@ -1443,3 +1442,8 @@ def test_description_length():
 
 def test_initial_description_length():
     assert pytest.approx(GraphMDL().fit(g).initial_description_length(), rel=1e-01) == 256.3
+
+
+def test_graphmdl_on_multidigraph():
+    graph = init_multi_graph()['graph']
+    GraphMDL(debug=True).fit(graph)

@@ -48,6 +48,9 @@ class CodeTable:
         ----------
         row
         """
+        if row.arrival_number is None:
+            row.arrival_number = len(self._rows) + 1
+
         self._rows.append(row)  # Add the new row at the end of the list
 
         # compute the row pattern embeddings and store them
@@ -462,7 +465,7 @@ class CodeTable:
         """
         length = utils.get_total_label(row.pattern())
         support = utils.get_support(row.embeddings())
-        return length, support
+        return length, support, -row.arrival_number
 
     def is_node_marked(self, node_number, graph, cover_marker, label):
         """ Check if a particular node label  is already marked
@@ -529,9 +532,21 @@ class CodeTable:
             raise ValueError("label shouldn't be empty or none")
 
     def _get_edge_index_from_label(self, values, label):
-        """ Provide the good edge index, it's used in the multigraph treatment"""
-        return [i for i, j in enumerate(values, start=0) if
-                'label' in j and j['label'] == label][0]
+        """ Provide the good edge index, it's used in the multigraph treatment
+        Parameters
+        ---------
+        values
+        label
+        Returns
+        -------
+        int
+        """
+        res = [i for i, j in enumerate(values, start=0) if
+               'label' in j and j['label'] == label]
+        if len(res) != 0:
+            return res[0]
+        else:
+            return None
 
     def is_edge_marked(self, start, end, graph, cover_marker, label):
         """ Check if an edge is already marked
@@ -553,9 +568,13 @@ class CodeTable:
                 if not (False in ['label' in v
                                   for v in graph.get_edge_data(start, end).values()]):
                     edge_index = self._get_edge_index_from_label(graph.get_edge_data(start, end).values(), label)
-                    edge = graph[start][end][edge_index]
-                    return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][
-                        label] == cover_marker
+                    if edge_index is not None:
+                        edge = graph[start][end][edge_index]
+                        return 'cover_mark' in edge and label in edge['cover_mark'] and edge['cover_mark'][
+                            label] == cover_marker
+                    else:
+                        return ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
+                                     f"Also the edge should have {label}  as label")
                 else:
                     raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
                                      f"Also the edge should have a label ")
@@ -757,7 +776,7 @@ class CodeTable:
                     return len(graph.edges(graph_node)) == len(pattern.edges(pattern_node))
                 else:
                     return len(graph.in_edges(graph_node)) + len(graph.out_edges(graph_node)) \
-                       == len(pattern.in_edges(pattern_node)) + len(pattern.out_edges(pattern_node))
+                           == len(pattern.in_edges(pattern_node)) + len(pattern.out_edges(pattern_node))
             else:
                 return True
         else:
@@ -960,7 +979,7 @@ class CodeTable:
                                             utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
                                                                  self._data_graph)],
                              "code_length": self._singleton_code_length[singleton],
-                          """   "used_embeddings": [{
+                             """   "used_embeddings": [{
                                  "mapping": embedding[0].keys(),
                                  "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
                              } for embedding in self._singleton_used_embeddings[singleton]],"""
@@ -984,7 +1003,7 @@ class CodeTable:
                            utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
                                                 self._data_graph)],
             "code_length": self._singleton_code_length[singleton],
-           """ "used_embeddings": [{
+            """ "used_embeddings": [{
                 "mapping": embedding[0].keys(),
                 "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
             } for embedding in self._singleton_used_embeddings[singleton]],"""

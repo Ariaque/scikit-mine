@@ -324,7 +324,27 @@ def _edge_match(edge1, edge2):
     if 'label' in edge1 and 'label' in edge2:
         return edge1['label'] == edge2['label']
     else:
-        return True
+        return ValueError("All edges must have labels")
+
+
+def _edge_match_for_multigraph(edge1, edge2):
+    """ Compare two given nodes in a given multigraph
+    Parameters
+    ----------
+    edge1
+    edge2
+    Returns
+    -------
+    bool
+    """
+    edge1_values = dict(edge1).values()
+    edge2_values = dict(edge2).values()
+    edge1_labels = [list(edge1_values)[0][i] for i in list(edge1_values)[0].keys() if i == 'label']
+    edge2_labels = [list(edge2_values)[0][i] for i in list(edge2_values)[0].keys() if i == 'label']
+    if len(edge2_labels) != 0 and len(edge1_labels) != 0:
+        return not (False in [label in edge1_labels for label in edge2_labels])
+    else:
+        raise ValueError("All edges must have labels")
 
 
 def get_embeddings(pattern, graph):
@@ -343,14 +363,19 @@ def get_embeddings(pattern, graph):
         'node_match': _node_match,
         'edge_match': _edge_match
     }
+
+    comp_multigraph = {
+        'node_match': _node_match,
+        'edge_match': _edge_match_for_multigraph
+    }
     graph_matcher = None
     # Create matcher according the graph type (directed or no)
     if type(graph) is nx.DiGraph:
         graph_matcher = iso.DiGraphMatcher(graph, pattern, **comp)
     elif type(graph) is nx.MultiDiGraph:
-        graph_matcher = iso.MultiDiGraphMatcher(graph, pattern, **comp)
+        graph_matcher = iso.MultiDiGraphMatcher(graph, pattern, **comp_multigraph)
     elif type(graph) is nx.MultiGraph:
-        graph_matcher = iso.MultiGraphMatcher(graph, pattern, **comp)
+        graph_matcher = iso.MultiGraphMatcher(graph, pattern, **comp_multigraph)
     else:
         graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
     return list(graph_matcher.subgraph_monomorphisms_iter())
@@ -1096,7 +1121,10 @@ def merge_candidate(candidate):
     --------
     Graph
     """
-    graph = nx.DiGraph()
+    if type(candidate.first_pattern) is nx.MultiDiGraph:
+        graph = nx.MultiDiGraph()
+    else:
+        graph = nx.DiGraph()
     ports = []
     for p in candidate.port:
         port = (int(p[0].split('v')[1]), int(p[1].split('v')[1]))
