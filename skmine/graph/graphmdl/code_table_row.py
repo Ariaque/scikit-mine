@@ -135,12 +135,11 @@ class CodeTableRow:
                 else:
                     self._port_code_length[p] = code
 
-    def compute_description_length(self, standard_table):
-        """ Compute the row  description length
+    """def compute_description_length(self, standard_table):
+        Compute the row  description length
         Parameters
         ---------
         standard_table
-        """
         if self._pattern_usage is None:
             self._description_length = 0.0
 
@@ -157,9 +156,9 @@ class CodeTableRow:
 
         self._description_length = self._code_length  # usage description
         self._description_length += utils.encode(self._pattern, standard_table)  # structure description
-        self._description_length += port_desc  # ports description
+        self._description_length += port_desc  # ports description"""
 
-    def kgmdl_compute_description_length(self, standard_table):
+    def compute_description_length(self, standard_table):
         """ Compute the row  description length according kgmdl equation
         Parameters
         ---------

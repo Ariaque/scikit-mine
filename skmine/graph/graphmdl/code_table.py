@@ -106,23 +106,23 @@ class CodeTable:
         # compute each row code length and description length
         for row in self._rows:
             row.compute_code_length(usage_sum)
-            row.compute_description_length(self._standard_table)
+            # row.compute_description_length(self._standard_table)
 
         self._compute_singleton_code(usage_sum)  # compute singleton code length
         utils.MyLogger().info(f"cover time...{time.time() - b}")
 
-    def compute_total_description_length(self):
-        """ Compute the total description length
+    """def compute_total_description_length(self):
+        Compute the total description length
         Returns
         -------
         float
-        """
+        
         self.compute_ct_description_length()
 
         return self._description_length + self.compute_rewritten_graph_description()
 
-    def compute_ct_description_length(self):
-        """ Compute this code table description length """
+     def compute_ct_description_length(self):
+        Compute this code table description length 
         if len(self._rewritten_graph.nodes()) != 0:  # Check if the cover is done
             # check if the code table is already covered
             description_length = 0.0
@@ -134,19 +134,19 @@ class CodeTable:
 
             self._description_length = description_length
         else:
-            raise ValueError("You should cover the code table before computing his description")
+            raise ValueError("You should cover the code table before computing his description")"""
 
-    def compute_kgmdl_total_description_length(self):
+    def compute_total_description_length(self):
         """ Compute total description length according the prequential code equation
         Returns
         -------
         double
         """
-        self.compute_kgmdl_ct_description_length()
+        self.compute_ct_description_length()
 
-        return self._description_length + self.compute_kgmdl_rewritten_graph_description()
+        return self._description_length + self.compute_rewritten_graph_description()
 
-    def compute_kgmdl_ct_description_length(self):
+    def compute_ct_description_length(self):
         """ Compute this code table description length
             according kgmdl equation (with prequential code) """
         if len(self._rewritten_graph.nodes()) != 0:  # Check if the cover is done
@@ -154,21 +154,21 @@ class CodeTable:
             description_length = 0.0
             for row in self._rows:
                 if row.pattern_usage() != 0:
-                    row.kgmdl_compute_description_length(self._standard_table)
+                    row.compute_description_length(self._standard_table)
                     description_length += row.description_length()
 
-            description_length += self.kgmdl_compute_singleton_description_length()
+            description_length += self._compute_singleton_description_length()
 
             self._description_length = description_length
         else:
             raise ValueError("You should cover the code table before computing his description")
 
-    def compute_rewritten_graph_description(self):
-        """Compute description length of the rewritten graph
+    """def compute_rewritten_graph_description(self):
+        Compute description length of the rewritten graph
         Returns
         -------
         float
-        """
+        
         if len(self._rewritten_graph.nodes()) != 0:
             desc = 0.0
             for node in self._rewritten_graph.nodes(data=True):
@@ -182,9 +182,9 @@ class CodeTable:
                     desc += 0.0
             return desc
         else:
-            raise ValueError("You should first cover the code table")
+            raise ValueError("You should first cover the code table")"""
 
-    def compute_kgmdl_rewritten_graph_description(self):
+    def compute_rewritten_graph_description(self):
         """ Compute _description_length of the rewritten graph,
             according kgmdl equation
         Returns
@@ -327,6 +327,32 @@ class CodeTable:
                 else:
                     self._singleton_code_length[u] = utils.log2(v, usage_sum)
 
+    """def _compute_singleton_description_length(self):
+         Compute the sum of each singleton pattern description length
+        Returns
+        -------
+        float
+        
+        desc = 0.0
+        if len(self._vertex_singleton_usage.keys()) != 0:
+            for key in self._vertex_singleton_usage.keys():
+                desc += utils.encode_singleton(self._standard_table, 1, key)
+                desc += self._singleton_code_length[key]
+                # port description, the singleton have one port and one node
+                # Then we have 1 + len(nodes) = 2 and log2(binomial(1,1)), port code is 0
+                desc += math.log2(2)
+
+        if len(self._edge_singleton_usage.keys()) != 0:
+            for key in self._edge_singleton_usage.keys():
+                desc += utils.encode_singleton(self._standard_table, 2, key)
+                desc += self._singleton_code_length[key]
+                # port description, the singleton have two ports and two nodes
+                # Then we have 1 + len(nodes) = 3 and log2(binomial(2,2)), port code is {1:1, 2:1}
+                # Then sum = 2
+                desc += math.log2(3) + 2
+
+        return desc"""
+
     def _compute_singleton_description_length(self):
         """ Compute the sum of each singleton pattern description length
         Returns
@@ -337,32 +363,6 @@ class CodeTable:
         if len(self._vertex_singleton_usage.keys()) != 0:
             for key in self._vertex_singleton_usage.keys():
                 desc += utils.encode_singleton(self._standard_table, 1, key)
-                desc += self._singleton_code_length[key]
-                # port description, the singleton have one port and one node
-                # Then we have 1 + len(nodes) = 2 and log2(binomial(1,1)), port code is 0
-                desc += math.log2(2)
-
-        if len(self._edge_singleton_usage.keys()) != 0:
-            for key in self._edge_singleton_usage.keys():
-                desc += utils.encode_singleton(self._standard_table, 2, key)
-                desc += self._singleton_code_length[key]
-                # port description, the singleton have two ports and two nodes
-                # Then we have 1 + len(nodes) = 3 and log2(binomial(2,2)), port code is {1:1, 2:1}
-                # Then sum = 2
-                desc += math.log2(3) + 2
-
-        return desc
-
-    def kgmdl_compute_singleton_description_length(self):
-        """ Compute the sum of each singleton pattern description length
-        Returns
-        -------
-        float
-        """
-        desc = 0.0
-        if len(self._vertex_singleton_usage.keys()) != 0:
-            for key in self._vertex_singleton_usage.keys():
-                desc += utils.encode_singleton(self._standard_table, 1, key)
                 # desc += self._singleton_code_length[key]
                 # port description, the singleton have one port and one node
                 # Then we have 1 + len(nodes) = 2 and log2(binomial(1,1)), port code is 0
@@ -379,8 +379,8 @@ class CodeTable:
 
         return desc
 
-    def _compute_embedding_pattern_description(self, row_number, embed_port):
-        """ Compute description length for pattern embedding in the rewritten graph
+    """def _compute_embedding_pattern_description(self, row_number, embed_port):
+        Compute description length for pattern embedding in the rewritten graph
         Parameters
         ----------
         row_number : The pattern row
@@ -388,7 +388,7 @@ class CodeTable:
         Returns
         ---------
         float
-        """
+        
         if len(self._rows) - 1 >= row_number >= 0:
             desc = 0.0
             row = self._rows[row_number]
@@ -407,14 +407,13 @@ class CodeTable:
             raise ValueError("The row number is out of the bounds")
 
     def _compute_embedding_singleton_description(self, label):
-        """ Compute _description_length for singleton embedding in the rewritten graph
+         Compute _description_length for singleton embedding in the rewritten graph
         Parameters
         ----------
         label : The singleton label
         Returns
         -------
         float
-        """
         desc = 0.0
         if label in self._vertex_singleton_usage:
             desc += self._singleton_code_length[label]
@@ -428,7 +427,7 @@ class CodeTable:
             desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 2))
             return desc
         else:
-            raise ValueError("The label should be a data graph label")
+            raise ValueError("The label should be a data graph label")"""
 
     def singleton_code_length(self):
         """ Provide the current singleton pattern code length
@@ -754,7 +753,10 @@ class CodeTable:
         """
         if graph_node in graph.nodes() and pattern_node in pattern.nodes():
             if graph.edges(graph_node) is not None and pattern.edges(pattern_node) is not None:
-                return len(graph.in_edges(graph_node)) + len(graph.out_edges(graph_node)) \
+                if type(graph) is nx.Graph or type(graph) is nx.MultiGraph:
+                    return len(graph.edges(graph_node)) == len(pattern.edges(pattern_node))
+                else:
+                    return len(graph.in_edges(graph_node)) + len(graph.out_edges(graph_node)) \
                        == len(pattern.in_edges(pattern_node)) + len(pattern.out_edges(pattern_node))
             else:
                 return True

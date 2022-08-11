@@ -349,7 +349,10 @@ def get_embeddings(pattern, graph):
         graph_matcher = iso.DiGraphMatcher(graph, pattern, **comp)
     elif type(graph) is nx.MultiDiGraph:
         graph_matcher = iso.MultiDiGraphMatcher(graph, pattern, **comp)
-
+    elif type(graph) is nx.MultiGraph:
+        graph_matcher = iso.MultiGraphMatcher(graph, pattern, **comp)
+    else:
+        graph_matcher = iso.GraphMatcher(graph, pattern, **comp)
     return list(graph_matcher.subgraph_monomorphisms_iter())
 
 
@@ -550,33 +553,17 @@ def display_graph(graph: Graph):
     return msg
 
 
-def draw_pattern(g: Graph):
+def draw_graph(g: Graph, figsize=(2, 2)):
     """ Draw a given pattern
     Parameters
     ----------
     g
+    figsize : the plot width and height in a tuple
     """
     pos = nx.spring_layout(g, seed=7)
     edge_labels = dict([((u, v,), d['label']) for u, v, d in g.edges(data=True)])
     node_labels = dict([(u, d['label']) for u, d in g.nodes(data=True) if 'label' in d])
-    plt.figure(1, figsize=(2, 2))
-    nx.draw(g, pos, with_labels=True)
-    nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels, font_color="red", font_weight="bold", font_size=14)
-    nx.draw_networkx_labels(g, pos, node_labels, font_color="red", font_weight="bold", font_size=14)
-    plt.show()
-
-
-def draw_graph(g: Graph):
-    """ Draw a given graph
-       Parameters
-       ----------
-       g
-       """
-    # Draw the graph with the edge label
-    pos = nx.spring_layout(g, seed=7)
-    edge_labels = dict([((u, v,), d['label']) for u, v, d in g.edges(data=True)])
-    node_labels = dict([(u, d['label']) for u, d in g.nodes(data=True)])
-    plt.figure(1, figsize=(8, 8))
+    plt.figure(1, figsize=figsize)
     nx.draw(g, pos, with_labels=True)
     nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels, font_color="red", font_weight="bold", font_size=14)
     nx.draw_networkx_labels(g, pos, node_labels, font_color="red", font_weight="bold", font_size=14)
