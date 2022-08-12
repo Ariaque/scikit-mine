@@ -16,28 +16,25 @@ def _order_pruning_rows(row):
 
 class GraphMDL(BaseMiner):
     """
-        Graph Minimum Description Length
+        This is a python re-implementation of the GraphMDL family of approaches for extracting a small and 
+        descriptive set of graph patterns from graph data.
+        This re-implementation supports directed graphs only, but supports multi-graphs.
 
-        GraphMDL is an implementation in python of the GraphMDL+ algorithm make by Francesco Bariatti.
-        It's exist moreover the Java implementation at 'https://gitlab.inria.fr/fbariatt/phd_project',
-        also there is some functionalities not implemented here.
+        This is a python re-implementation of the original Java algorithm, which is available at 'https://gitlab.inria.fr/fbariatt/graphmdl'.
+        As such, some functionalities are not available in this version, such as a full support of graph automorphisms.
 
-        It's an algorithm inspired by Krimp algorithm, and based on Minimum Description Length(MDL) principle
-        to finding patterns in data represent by graphs, also it can be used as anytime algorithm
+        Author: Arnauld Djedjemel
 
         Parameters
         -----------
         debug: bool, default=False
-            Either to activate debug print or not
+            Whether to activate debug logs.
 
         References
         ----------
-        Francesco Bariatti. GraphMDL+ - PHD. PhD thesis
-        Francesco Bariatti, Peggy Cellier, and Sébastien Ferré. GraphMDL+ : interleaving
-            the generation and MDL-based selection of graph patterns. In Proceedings of the
-            36th Annual ACM Symposium on Applied Computing
+        F. Bariatti, "Mining Tractable Sets of Graph Patterns with the Minimum Description Length Principle", PhD thesis, Université de Rennes 1, 2021. Available: https://hal.inria.fr/tel-03523742
 
-
+        F. Bariatti, P. Cellier, and S. Ferré. "GraphMDL+ : interleaving the generation and MDL-based selection of graph patterns", in Proceedings of the 36th Annual ACM Symposium on Applied Computing, Mar. 2021, pp. 355–363. doi: 10.1145/3412841.3441917.
     """
 
     def __init__(self, debug=False):
@@ -55,8 +52,10 @@ class GraphMDL(BaseMiner):
         self._initial_description_length = 0
 
     def _init_graph_mdl(self):
-        """ Initialize the GraphMDL+ algorithm elements such as the label code,
-            the initial code table (CT0), cover it to create the first rewritten graph"""
+        """ 
+            Initialize the GraphMDL elements such as the label code,
+            the initial code table (CT0), and run a cover computation to create the first rewritten graph.
+        """
         if not self._debug:
             utils.MyLogger().setLevel(logging.WARNING)
         self._already_test = []
@@ -73,13 +72,15 @@ class GraphMDL(BaseMiner):
         utils.MyLogger().info(f"Initial description length = {round(self._description_length, 2)}")
 
     def fit(self, D, timeout=0):
-        """ Fit GraphMDl+ on a given data graph
+        """ 
+            Execute GraphMDl on a given data graph
+            
             Parameters
             ----------
-            D : networkx graph where all edges are labeled
+            D : networkx graph. All edges need to be labeled.
             timeout: int, default=0
-            Maximum of the algorithm execution time
-            It's useful for the anytime aspect of the algorithm.
+                Maximum time for the algorithm execution (approx.).
+            
             Returns
             -------
             GraphMDL
@@ -99,7 +100,8 @@ class GraphMDL(BaseMiner):
                 return self
 
     def _graph_mdl(self):
-        """ Non-anytime graphmdl+ algorithm
+        """
+            Non-anytime graphmdl+ algorithm
         Returns
         -------
         GraphMDL
@@ -221,16 +223,19 @@ class GraphMDL(BaseMiner):
         return self
 
     def _stop_by_time(self, passed_time, timeout):
-        """ Check if the passed time surpasses the timeout
-        Parameters
-        ---------
-        passed_time : int
-            The passed time
-        timeout : int
-            The maximum time
-        Returns
-        --------
-        bool
+        """ 
+            Check if the passed time surpasses the timeout
+            
+            Parameters
+            ---------
+            passed_time : int
+                The passed time
+            timeout : int
+                The maximum time
+            
+            Returns
+            --------
+            bool
         """
         if passed_time >= timeout:
             return self._graph_mdl_end()
@@ -238,10 +243,11 @@ class GraphMDL(BaseMiner):
             return False
 
     def _graph_mdl_end(self):
-        """ Complete the graph mdl algorithm by cover the code table and stop
-        Returns
-        -------
-        bool
+        """ 
+            Complete the graph mdl algorithm by cover the code table and stop
+            Returns
+            -------
+            bool
         """
         utils.MyLogger().info("GraphMDL+ end .....")
         self._code_table.cover(debug=self._debug)
@@ -253,13 +259,16 @@ class GraphMDL(BaseMiner):
         return True
 
     def _order_candidates(self, candidate):
-        """Provide the candidate elements to order candidates
-        Parameters
-        ----------
-        candidate
-        Returns
-        -------
-        list
+        """
+            Provide the candidate elements to order candidates
+            
+            Parameters
+            ----------
+            candidate
+            
+            Returns
+            -------
+            list
         """
         return [candidate.usage, candidate.exclusive_port_number,
                 -self._label_codes.encode(candidate.final_pattern())]
@@ -271,8 +280,10 @@ class GraphMDL(BaseMiner):
             self._old_usage[r.pattern()] = r.pattern_usage()
 
     def _compute_pruning_candidates(self):
-        """ Find the row where their usage has decreased since the last usage,
-        it's the step before the code table pruning"""
+        """ 
+            Find the row where their usage has decreased since the last usage,
+            it's the step before the code table pruning
+        """
         for r in self._code_table.rows():
             if r.pattern() in self._old_usage.keys():
                 if r.pattern_usage() < self._old_usage[r.pattern()]:
@@ -280,8 +291,9 @@ class GraphMDL(BaseMiner):
 
     def _pruning(self):
         """ Make the code table pruning as krimp pruning
-           That's consist of remove row in code table who are unnecessary,
-            because without them the code table is better """
+            That's consist of remove row in code table who are unnecessary,
+            because without them the code table is better 
+        """
         utils.MyLogger().info(f"Pruning start ....")
         self._compute_old_usage()  # compute old pattern usage
         self._pruning_rows.sort(key=_order_pruning_rows)  # sort the pruning rows
@@ -300,13 +312,15 @@ class GraphMDL(BaseMiner):
         utils.MyLogger().info("Pruning end ....")
 
     def patterns(self):
-        """ Provide the algorithm found patterns
-        Returns
-        -------
-        set
+        """ 
+            Return the patterns found by the algorithm after fit has been called.
+            
+            Returns
+            -------
+            set
         """
-        self._patterns = set()
         if self._code_table is not None:
+            self._patterns = set()
             for r in self._code_table.rows():
                 if r.code_length() != 0:
                     self._patterns.add(r.pattern())
@@ -315,28 +329,33 @@ class GraphMDL(BaseMiner):
                 self._patterns.add(utils.create_singleton_pattern(s, self._code_table))
 
             return self._patterns
-
         else:
-            print("Fit The algorithm firstly")
+            raise ValueError("The fit method must be called first")
 
     def description_length(self):
-        """ Provide the description length
-        Returns
-        --------
-        float
+        """ 
+            Return the MDL description length (model + encoded data) for the best code table found by the algorithm.
+            
+            Returns
+            --------
+            float
         """
         return self._description_length
 
     def initial_description_length(self):
-        """ Provide the initial description length
-        Returns
-        -------
-        float
+        """ 
+            Return the MDL description length for the initial --singleton-only-- code table CT0.
+            
+            Returns
+            -------
+            float
         """
         return self._initial_description_length
 
     def discover(self, *args, **kwargs):
-        """ Provide a summary of the algorithm execution"""
+        """ 
+            Provide a summary of the algorithm execution.
+        """
         if self._code_table is not None:
             print(self._code_table.display_ct())
             print("final description length : ", self._description_length)
@@ -348,10 +367,7 @@ class GraphMDL(BaseMiner):
                 for s in self._code_table.singleton_code_length().keys():
                     print("\n", s)
         else:
-            print("Fit the graphmdl+ algorithm firstly")
-
-    def _code_table_row_to_json(self):
-        pass
+            raise ValueError("The fit method must be called first")
 
     def to_json(self):
         res = dict()
