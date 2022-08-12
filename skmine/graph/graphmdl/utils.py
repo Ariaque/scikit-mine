@@ -6,7 +6,6 @@ from collections import Counter
 from datetime import datetime
 
 import networkx as nx
-from matplotlib import pyplot as plt
 from networkx import Graph
 from networkx.algorithms import isomorphism as iso
 from ..graphmdl.candidate import Candidate
@@ -578,21 +577,18 @@ def display_graph(graph: Graph):
     return msg
 
 
-def draw_graph(g: Graph, figsize=(2, 2)):
+def draw_graph(g: Graph):
     """ Draw a given pattern
     Parameters
     ----------
     g
-    figsize : the plot width and height in a tuple
     """
     pos = nx.spring_layout(g, seed=7)
     edge_labels = dict([((u, v,), d['label']) for u, v, d in g.edges(data=True)])
     node_labels = dict([(u, d['label']) for u, d in g.nodes(data=True) if 'label' in d])
-    plt.figure(1, figsize=figsize)
     nx.draw(g, pos, with_labels=True)
     nx.draw_networkx_edge_labels(g, pos, edge_labels=edge_labels, font_color="red", font_weight="bold", font_size=14)
     nx.draw_networkx_labels(g, pos, node_labels, font_color="red", font_weight="bold", font_size=14)
-    plt.show()
 
 
 def get_edge_in_embedding(embedding, pattern):
