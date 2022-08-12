@@ -21,6 +21,7 @@ Welcome to scikit-mine's documentation!
    reference/emerging
    reference/base
    reference/callbacks
+   reference/graph
 
 .. toctree::
    :maxdepth: 2
