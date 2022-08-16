@@ -1446,4 +1446,4 @@ def test_initial_description_length():
 
 def test_graphmdl_on_multidigraph():
     graph = init_multi_graph()['graph']
-    GraphMDL(debug=True).fit(graph)
+    GraphMDL().fit(graph)

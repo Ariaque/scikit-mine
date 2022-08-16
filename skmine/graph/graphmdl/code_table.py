@@ -77,15 +77,11 @@ class CodeTable:
         """
         return self._rows
 
-    def cover(self, debug=False):
+    def cover(self):
         """ Make the cover for the code table,
 
             the cover marker is get from the data graph
         """
-        if not debug:
-            utils.MyLogger().setLevel(logging.WARNING)
-        else:
-            utils.MyLogger().setLevel(logging.INFO)
         b = time.time()
         # Get the cover marker and increment it
         if 'cover_marker' in self._data_graph.graph:
@@ -112,32 +108,7 @@ class CodeTable:
             # row.compute_description_length(self._standard_table)
 
         self._compute_singleton_code(usage_sum)  # compute singleton code length
-        utils.MyLogger().info(f"cover time...{time.time() - b}")
-
-    """def compute_total_description_length(self):
-        Compute the total description length
-        Returns
-        -------
-        float
-        
-        self.compute_ct_description_length()
-
-        return self._description_length + self.compute_rewritten_graph_description()
-
-     def compute_ct_description_length(self):
-        Compute this code table description length 
-        if len(self._rewritten_graph.nodes()) != 0:  # Check if the cover is done
-            # check if the code table is already covered
-            description_length = 0.0
-            for row in self._rows:
-                if row.pattern_usage() != 0:
-                    description_length += row.description_length()
-
-            description_length += self._compute_singleton_description_length()
-
-            self._description_length = description_length
-        else:
-            raise ValueError("You should cover the code table before computing his description")"""
+        utils.MyLogger.info(f"cover time...{time.time() - b}")
 
     def compute_total_description_length(self):
         """ Compute total description length according the prequential code equation
@@ -165,27 +136,6 @@ class CodeTable:
             self._description_length = description_length
         else:
             raise ValueError("You should cover the code table before computing his description")
-
-    """def compute_rewritten_graph_description(self):
-        Compute description length of the rewritten graph
-        Returns
-        -------
-        float
-        
-        if len(self._rewritten_graph.nodes()) != 0:
-            desc = 0.0
-            for node in self._rewritten_graph.nodes(data=True):
-                if 'is_Pattern' in node[1] and 'is_singleton' not in node[1]:
-                    row_number = int(node[1]['label'].split('P')[1])
-                    embed_port = utils.get_port_node(self._rewritten_graph, node[0])
-                    desc += self._compute_embedding_pattern_description(row_number, embed_port)
-                elif 'is_Pattern' in node[1] and 'is_singleton' in node[1]:
-                    desc += self._compute_embedding_singleton_description(node[1]['label'])
-                else:
-                    desc += 0.0
-            return desc
-        else:
-            raise ValueError("You should first cover the code table")"""
 
     def compute_rewritten_graph_description(self):
         """ Compute _description_length of the rewritten graph,
@@ -330,32 +280,6 @@ class CodeTable:
                 else:
                     self._singleton_code_length[u] = utils.log2(v, usage_sum)
 
-    """def _compute_singleton_description_length(self):
-         Compute the sum of each singleton pattern description length
-        Returns
-        -------
-        float
-        
-        desc = 0.0
-        if len(self._vertex_singleton_usage.keys()) != 0:
-            for key in self._vertex_singleton_usage.keys():
-                desc += utils.encode_singleton(self._standard_table, 1, key)
-                desc += self._singleton_code_length[key]
-                # port description, the singleton have one port and one node
-                # Then we have 1 + len(nodes) = 2 and log2(binomial(1,1)), port code is 0
-                desc += math.log2(2)
-
-        if len(self._edge_singleton_usage.keys()) != 0:
-            for key in self._edge_singleton_usage.keys():
-                desc += utils.encode_singleton(self._standard_table, 2, key)
-                desc += self._singleton_code_length[key]
-                # port description, the singleton have two ports and two nodes
-                # Then we have 1 + len(nodes) = 3 and log2(binomial(2,2)), port code is {1:1, 2:1}
-                # Then sum = 2
-                desc += math.log2(3) + 2
-
-        return desc"""
-
     def _compute_singleton_description_length(self):
         """ Compute the sum of each singleton pattern description length
         Returns
@@ -381,56 +305,6 @@ class CodeTable:
                 desc += math.log2(3) + 2
 
         return desc
-
-    """def _compute_embedding_pattern_description(self, row_number, embed_port):
-        Compute description length for pattern embedding in the rewritten graph
-        Parameters
-        ----------
-        row_number : The pattern row
-        embed_port: The embedding ports
-        Returns
-        ---------
-        float
-        
-        if len(self._rows) - 1 >= row_number >= 0:
-            desc = 0.0
-            row = self._rows[row_number]
-            desc += row.code_length()
-            desc += math.log2(len(row.port_code_length()) + 1)
-
-            code_port_total = 0.0
-            for p in embed_port:
-                if p in row.port_code_length():
-                    code_port_total += row.port_code_length()[p]
-
-            desc += code_port_total
-            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), len(embed_port)))
-            return desc
-        else:
-            raise ValueError("The row number is out of the bounds")
-
-    def _compute_embedding_singleton_description(self, label):
-         Compute _description_length for singleton embedding in the rewritten graph
-        Parameters
-        ----------
-        label : The singleton label
-        Returns
-        -------
-        float
-        desc = 0.0
-        if label in self._vertex_singleton_usage:
-            desc += self._singleton_code_length[label]
-            desc += math.log2(2)  # port_count = 2 and total_port_code = 0
-            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 1))
-            return desc
-        elif label in self._edge_singleton_usage:
-            desc += self._singleton_code_length[label]
-            desc += math.log2(3)  # port_count = 2
-            desc += 2  # total_port_code = 1.0 + 1.0
-            desc += math.log2(utils.binomial(len(self._data_graph.nodes()), 2))
-            return desc
-        else:
-            raise ValueError("The label should be a data graph label")"""
 
     def singleton_code_length(self):
         """ Provide the current singleton pattern code length
@@ -574,7 +448,7 @@ class CodeTable:
                             label] == cover_marker
                     else:
                         return ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
-                                     f"Also the edge should have {label}  as label")
+                                          f"Also the edge should have {label}  as label")
                 else:
                     raise ValueError(f"{start} and {end} should be a graph node and {start}-{end} a graph edge."
                                      f"Also the edge should have a label ")
@@ -969,64 +843,6 @@ class CodeTable:
 
         return vertex_singleton_usage, edge_singleton_usage, singleton_used_embeddings
 
-    def to_json(self):
-        res = [row.to_json() for row in self._rows if row.pattern_usage() != 0]
-
-        vertex_singleton = [{"singleton": True,
-                             "st_length": self._standard_table.encode_singleton_vertex(singleton),
-                             "embeddings": [embedding.keys()
-                                            for embedding in
-                                            utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
-                                                                 self._data_graph)],
-                             "code_length": self._singleton_code_length[singleton],
-                             """   "used_embeddings": [{
-                                 "mapping": embedding[0].keys(),
-                                 "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
-                             } for embedding in self._singleton_used_embeddings[singleton]],"""
-                             "usage": usage,
-                             "ports": {"0": {"code_length": 0, "usage": 1}},
-                             "structure": {
-                                 "vertices": [[str(singleton)]],
-                                 "edges": [],
-                                 "canonical_certificate": {
-                                     "elements": [{"vertex": 0, "label": singleton, "type": "vertex_label"}],
-                                     "vertex_count": 1
-                                 },
-                                 "automorphisms": [[0]]
-                             }} for singleton, usage in self._vertex_singleton_usage.items()]
-
-        edge_singleton = [{
-            "singleton": True,
-            "st_length": self._standard_table.encode_singleton_edge(singleton),
-            "embeddings": [embedding.keys()
-                           for embedding in
-                           utils.get_embeddings(utils.create_singleton_pattern(singleton, self),
-                                                self._data_graph)],
-            "code_length": self._singleton_code_length[singleton],
-            """ "used_embeddings": [{
-                "mapping": embedding[0].keys(),
-                "ports": {str(p[1] - 1): p[0] - 1 for p in embedding[1]}
-            } for embedding in self._singleton_used_embeddings[singleton]],"""
-            "usage": usage,
-            "ports": {"0": {"code_length": 0, "usage": 1}, "1": {"code_length": 0, "usage": 1}},
-            "structure": {
-                "vertices": [],
-                "edges": [{"source": 0, "label": singleton, "target": 1}],
-                "canonical_certificate": {
-                    "elements": [
-                        {"vertex": 0, "label": "", "type": "vertex_label"},
-                        {"vertex": 1, "label": "", "type": "vertex_label"},
-                        {"source": 0, "label": singleton, "type": "edge", "target": 1}
-                    ],
-                    "vertex_count": 2
-                },
-                "automorphisms": [[0, 1], [1, 0]]
-            }
-        } for singleton, usage in self._edge_singleton_usage.items()]
-
-        res.extend(vertex_singleton)
-        res.extend(edge_singleton)
-        return res
 
     def data_is_multigraph(self):
         """ Provide if the data graph is a multigraph or not

@@ -136,29 +136,6 @@ class CodeTableRow:
                 else:
                     self._port_code_length[p] = code
 
-    """def compute_description_length(self, standard_table):
-        Compute the row  description length
-        Parameters
-        ---------
-        standard_table
-        if self._pattern_usage is None:
-            self._description_length = 0.0
-
-        if self._pattern_port_usage is None or self._port_code_length is None:
-            raise ValueError("Row's codes should be compute")
-        self._description_length = 0.0
-        code_port_total = 0.0
-        for value in self._port_code_length.values():
-            code_port_total += value
-
-        port_desc = math.log2(len(self._pattern.nodes()) + 1)
-        port_desc += math.log2(utils.binomial(len(self._pattern.nodes()), len(self._port_code_length)))
-        port_desc += code_port_total
-
-        self._description_length = self._code_length  # usage description
-        self._description_length += utils.encode(self._pattern, standard_table)  # structure description
-        self._description_length += port_desc  # ports description"""
-
     def compute_description_length(self, standard_table):
         """ Compute the row  description length according kgmdl equation
         Parameters
@@ -201,38 +178,6 @@ class CodeTableRow:
         return [utils.draw_pattern(self._pattern), self._pattern_usage, self._code_length,
                 len(self._pattern_port_usage),
                 self._pattern_port_usage, self._port_code_length]
-
-    def to_json(self):
-        """ Encode the code table row to json format
-        Returns
-        -------
-        dict
-        """
-        res = dict()
-        res["singleton"] = False
-        res['st_length'] = self._description_length
-        res["embeddings"] = [embedding.keys() for embedding in self._embeddings]
-        res["code_length"] = self._code_length
-        res["used_embeddings"] = [{
-            "mapping": embedding[0].keys(),
-            "ports": {str(p[1]):p[0] for p in embedding[1]}
-        } for embedding in self._used_embeddings]
-        res["usage"] = self._pattern_usage
-        res["ports"] = self._port_to_json()
-        res["structure"] = utils.graph_to_json(self._pattern)
-        return res
-
-    def _port_to_json(self):
-        """ Provide a json format of the row ports
-        Returns
-        -------
-        dict
-        """
-        res = dict()
-        for p in self._pattern_port_usage.items():
-            res[str(p[0])] = {"code_length": self._port_code_length[p[0]],
-                              "usage": p[1]}
-        return res
 
     def __str__(self):
         return "{} | {} |{} |{} |{} |{}" \
